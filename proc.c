@@ -532,3 +532,18 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+void
+register_handler(sighandler_t sighandler)
+{ 
+  struct proc *curproc = myproc();
+  char* addr = uva2ka(curproc->pgdir, (char*)curproc->tf->esp);
+  if ((curproc->tf->esp & 0xFFF) == 0)
+    panic("esp_offset == 0");
+
+  /* open a new frame */
+  *(int*)(addr + ((curproc->tf->esp - 4) & 0xFFF)) = curproc->tf->eip;
+  curproc->tf->esp -= 4;
+  /* update eip */
+  curproc->tf->eip = (uint)sighandler;
+}
