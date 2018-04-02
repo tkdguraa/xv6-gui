@@ -53,6 +53,7 @@ struct proc {
 
   char signal[32];             // A currently pending signal
   fptr signal_action[32];      // Each action is associated with sinal
+  int priority;                // Process Priority(0-20). Lower value, higher priority
 };
 
 // Process memory is laid out contiguously, low addresses first:
