@@ -120,6 +120,9 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             signal(int signum, sighandler_t handler);
+int             sigsend(int pid, int signum);
+int             cps(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

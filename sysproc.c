@@ -91,13 +91,20 @@ sys_uptime(void)
 }
 
 int
-sys_signal(int signum, sighandler_t handler)
+sys_signal(void)
 {
-
+  sighandler_t hd = 0;
+  return signal(0, hd);
 }
 
 int
-sigsend(int pid, int signum) 
+sys_sigsend(void) 
 {
+  return sigsend(0, 0);
+}
 
+int
+sys_cps(void)
+{
+  return cps();
 }

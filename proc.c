@@ -547,3 +547,41 @@ register_handler(sighandler_t sighandler)
   /* update eip */
   curproc->tf->eip = (uint)sighandler;
 }
+
+int
+signal(int signum, sighandler_t handler)
+{
+  return 22;
+}
+
+int
+sigsend(int pid, int signum)
+{
+  return 23;
+}
+
+// Current process status
+int
+cps(void)
+{
+  struct proc *p;
+
+  // Enable interrupts on this processor
+  sti();
+
+  // loop over process table looking for process
+  acquire(&ptable.lock);
+  cprintf("name |\t pid |\t state \t \n");
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->state == RUNNING)
+      cprintf("%s \t %d \t RUNNING \t \n", p->name, p->pid);
+    else if (p->state == RUNNABLE)
+      cprintf("%s \t %d \t RUNNABLE \t \n", p->name, p->pid);
+    else if (p->state == SLEEPING)
+      cprintf("%s \t %d \t SLEEPING \t \n", p->name, p->pid);
+  }
+
+  release(&ptable.lock);
+
+  return 24;
+}
