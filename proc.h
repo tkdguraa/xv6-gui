@@ -33,6 +33,7 @@ struct context {
 };
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+typedef void (*fptr)();
 
 // Per-process state
 struct proc {
@@ -49,6 +50,9 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  char signal[32];             // A currently pending signal
+  fptr signal_action[32];      // Each action is associated with sinal
 };
 
 // Process memory is laid out contiguously, low addresses first:
