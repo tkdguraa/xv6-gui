@@ -346,24 +346,46 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
 
-      // Signals
+      // Signal frmaework. Register handlers.
       if (p->signal != 0) {
         uint mask = (1 << 31);
         sighandler_t* handler = p->sighandlers[31];
 
-        while (mask > 0) {
+        while (mask > 4) {
           if ((p->signal & mask) && (*handler != 0))
             register_handler(handler);
           
           mask >>= 1;   // Move the mask to the next bit to check
           handler--;    // Move the pointer to the next handler
         }
+
+        // Register default handlers (number 0~2) if there is no given handler
+        while (mask > 0) {
+          if (p->signal & mask) {
+            if (*handler == 0) {
+              switch(mask) {
+                case 4: handler = sigchild; break;
+                case 2: handler = siguser; break;
+                case 1: handler = sigint; break;
+                dafault: break;
+              }
+            }
+            register_handler(handler); 
+          }
+
+          mask >>= 1;
+          handler--; 
+        }
+
+        p->signal = 0;  // reset signal
       }
 
       p->state = RUNNING;
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
+
+      sigsend(p->parent, SIGCHILD); // Notifiy the process’ parent that the process will terminate
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -552,6 +574,7 @@ procdump(void)
   }
 }
 
+// Regist the handler
 void
 register_handler(sighandler_t sighandler)
 { 
@@ -560,11 +583,24 @@ register_handler(sighandler_t sighandler)
   if ((curproc->tf->esp & 0xFFF) == 0)
     panic("esp_offset == 0");
 
-  /* open a new frame */
+  // Open a new frame
   *(int*)(addr + ((curproc->tf->esp - 4) & 0xFFF)) = curproc->tf->eip;
   curproc->tf->esp -= 4;
-  /* update eip */
+  // update eip
   curproc->tf->eip = (uint)sighandler;
+}
+
+void sigint() {
+  cprintf("SIGINT %d\n", myproc()->pid);
+  myproc()->killed = 1;
+}
+
+void siguser() {
+  cprintf("SIGUSER %d\n", myproc()->pid);
+}
+
+void sigchild() {
+  cprintf("SIGCHILD (one of my child terminated) %d\n", myproc()->pid);
 }
 
 int

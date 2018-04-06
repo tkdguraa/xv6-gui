@@ -50,7 +50,7 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  uint signal;                  // A currently pending signal
+  uint signal;                 // A currently pending signal
   sighandler_t sighandlers[32];// Every entry is a pointer to a
                                // function (accepting no arguments and
                                // returning no value)
@@ -58,6 +58,10 @@ struct proc {
 };
 
 void register_handler(sighandler_t sighandler);
+void sigint();
+void siguser();
+void sigchild();
+
 // Process memory is laid out contiguously, low addresses first:
 //   text
 //   original data and bss
