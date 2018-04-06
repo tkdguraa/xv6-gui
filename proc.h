@@ -33,7 +33,6 @@ struct context {
 };
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
-typedef void (*fptr)();
 
 // Per-process state
 struct proc {
@@ -51,10 +50,13 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  char signal[32];             // A currently pending signal
-  fptr signal_action[32];      // Each action is associated with sinal
+  int signal;                  // A currently pending signal
   int priority;                // Process Priority(0-20). Lower value, higher priority
 };
+
+extern sighandler_t sighandlers[32 + 1];  // Every entry is a pointer to a
+                                          // function (accepting no arguments and
+                                          // returning no value)
 
 // Process memory is laid out contiguously, low addresses first:
 //   text

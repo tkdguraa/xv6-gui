@@ -340,6 +340,7 @@ scheduler(void)
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
+      register_handler(sighandlers[p->signal]);
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
@@ -552,13 +553,27 @@ register_handler(sighandler_t sighandler)
 int
 signal(int signum, sighandler_t handler)
 {
-  return 22;
+  sighandlers[signum] = handler;
+  return 0;
 }
 
+// Send signal (signum) to the process with the given pid.
 int
 sigsend(int pid, int signum)
 {
-  return 23;
+  struct proc *p;
+  
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->pid == pid){
+      p->signal = signum;
+      release(&ptable.lock);
+      return 0;
+    }
+  }
+  
+  release(&ptable.lock);
+  return -1;
 }
 
 // Current process status

@@ -93,14 +93,25 @@ sys_uptime(void)
 int
 sys_signal(void)
 {
-  sighandler_t hd = 0;
-  return signal(0, hd);
+  int signum;
+  int handler = 0;
+
+  if (argint(0, &signum) < 0 || argint(1, &handler) < 0)
+    return -1;
+
+  return signal(signum, (sighandler_t)handler);
 }
 
 int
 sys_sigsend(void) 
 {
-  return sigsend(0, 0);
+  int pid;
+  int signum;
+
+  if(argint(0, &pid) < 0 || argint(1, &signum) < 0)
+    return -1;
+
+  return sigsend(pid, signum);
 }
 
 int
