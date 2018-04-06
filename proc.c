@@ -113,6 +113,9 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  p->signal = 0;                  // initizlize signal
+  memset(p->sighandlers, 0, 32);  // initialize signal handlers to 0 (NULL)
+
   return p;
 }
 
@@ -340,9 +343,23 @@ scheduler(void)
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      register_handler(sighandlers[p->signal]);
       c->proc = p;
       switchuvm(p);
+
+      // Signals
+      if (p->signal != 0) {
+        uint mask = (1 << 31);
+        sighandler_t* handler = p->sighandlers[31];
+
+        while (mask > 0) {
+          if ((p->signal & mask) && (*handler != 0))
+            register_handler(handler);
+          
+          mask >>= 1;   // Move the mask to the next bit to check
+          handler--;    // Move the pointer to the next handler
+        }
+      }
+
       p->state = RUNNING;
 
       swtch(&(c->scheduler), p->context);
@@ -553,7 +570,9 @@ register_handler(sighandler_t sighandler)
 int
 signal(int signum, sighandler_t handler)
 {
-  sighandlers[signum] = handler;
+  struct proc *curproc = myproc();
+
+  curproc->sighandlers[signum] = handler;
   return 0;
 }
 
@@ -566,7 +585,7 @@ sigsend(int pid, int signum)
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
-      p->signal = signum;
+      p->signal |= (1 << signum);
       release(&ptable.lock);
       return 0;
     }
@@ -592,7 +611,7 @@ cps(void)
     if (p->state == RUNNING)
       cprintf("%s \t %d \t RUNNING \t %d \t \n", p->name, p->pid, p->priority);
     else if (p->state == RUNNABLE)
-      cprintf("%s \t %d \t RUNNABLE \t %d \t \n", p->name, p->pid), p->priority;
+      cprintf("%s \t %d \t RUNNABLE \t %d \t \n", p->name, p->pid, p->priority);
     else if (p->state == SLEEPING)
       cprintf("%s \t %d \t SLEEPING \t %d \t \n", p->name, p->pid, p->priority);
   }

@@ -50,14 +50,14 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  int signal;                  // A currently pending signal
+  uint signal;                  // A currently pending signal
+  sighandler_t sighandlers[32];// Every entry is a pointer to a
+                               // function (accepting no arguments and
+                               // returning no value)
   int priority;                // Process Priority(0-20). Lower value, higher priority
 };
 
-extern sighandler_t sighandlers[32 + 1];  // Every entry is a pointer to a
-                                          // function (accepting no arguments and
-                                          // returning no value)
-
+void register_handler(sighandler_t sighandler);
 // Process memory is laid out contiguously, low addresses first:
 //   text
 //   original data and bss
