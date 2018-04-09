@@ -203,6 +203,7 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  memcpy(np->sighandlers, curproc->sighandlers, 32);
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -251,6 +252,10 @@ exit(void)
   end_op();
   curproc->cwd = 0;
 
+  cprintf("in exit, process name: %s, pid: %d parentpid: %d\n", curproc->name, curproc->pid, curproc->parent->pid);
+  // Send SIGCHILD signal to its parent process
+  sigsend(curproc->parent->pid, SIGCHILD);
+  
   acquire(&ptable.lock);
 
   // Parent might be sleeping in wait().
@@ -349,28 +354,27 @@ scheduler(void)
       // Signal frmaework. Register handlers.
       if (p->signal != 0) {
         uint mask = (1 << 31);
-        sighandler_t* handler = p->sighandlers[31];
+        sighandler_t* handler = &p->sighandlers[31];
 
         while (mask > 4) {
           if ((p->signal & mask) && (*handler != 0))
-            register_handler(handler);
+            register_handler(*handler);
           
           mask >>= 1;   // Move the mask to the next bit to check
           handler--;    // Move the pointer to the next handler
         }
 
-        // Register default handlers (number 0~2) if there is no given handler
+        // Default handlers (number 0~2) if there is no given handler
         while (mask > 0) {
           if (p->signal & mask) {
             if (*handler == 0) {
               switch(mask) {
-                case 4: handler = sigchild; break;
-                case 2: handler = siguser; break;
-                case 1: handler = sigint; break;
-                dafault: break;
+                case 4: sigchild(); break;
+                case 2: siguser(); break;
+                case 1: sigint(); break;
+                default: break;
               }
-            }
-            register_handler(handler); 
+            } else register_handler(*handler); 
           }
 
           mask >>= 1;
@@ -384,8 +388,6 @@ scheduler(void)
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
-
-      sigsend(p->parent, SIGCHILD); // Notifiy the process’ parent that the process will terminate
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -591,7 +593,6 @@ register_handler(sighandler_t sighandler)
 }
 
 void sigint() {
-  cprintf("SIGINT %d\n", myproc()->pid);
   myproc()->killed = 1;
 }
 
@@ -601,6 +602,17 @@ void siguser() {
 
 void sigchild() {
   cprintf("SIGCHILD (one of my child terminated) %d\n", myproc()->pid);
+}
+
+void killcurproc() {
+  struct proc *p;
+
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if ((p != initproc) && p->pid != 2 && p->state == SLEEPING) { //FIXME: state
+      sigsend(p->pid, SIGINT);
+      break;
+    }
+  }
 }
 
 int
@@ -626,6 +638,7 @@ sigsend(int pid, int signum)
       return 0;
     }
   }
+  
   
   release(&ptable.lock);
   return -1;

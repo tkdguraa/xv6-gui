@@ -176,6 +176,13 @@ main(void)
 
       continue;
     }
+    if(buf[0] == '@') {
+      printf(2, "SIGINT was called\n");
+      sigsend(atoi(&buf[1]), 0);
+
+      continue;
+    }
+
     if(fork1() == 0)
       runcmd(parsecmd(buf));
     wait();

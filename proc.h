@@ -62,6 +62,8 @@ void sigint();
 void siguser();
 void sigchild();
 
+void* memcpy(void *dst, const void *src, uint n);
+
 // Process memory is laid out contiguously, low addresses first:
 //   text
 //   original data and bss
