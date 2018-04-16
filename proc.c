@@ -12,6 +12,12 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
+struct {
+  struct proc* arr[NPROC];
+  int len;
+  int head;
+} q;
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -19,6 +25,22 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+
+void
+enqueue(struct proc* p)
+{
+  q.arr[(q.head + q.len) % NPROC] = p;
+  q.len++;
+}
+
+struct proc*
+dequeue()
+{
+  struct proc* p = q.arr[q.head];
+  q.head = (q.head + 1) % NPROC;
+  q.len--;
+  return p;
+}
 
 void
 pinit(void)
@@ -116,6 +138,8 @@ found:
   p->signal = 0;                  // initizlize signal
   memset(p->sighandlers, 0, 32);  // initialize signal handlers to 0 (NULL)
 
+  enqueue(p);
+
   return p;
 }
 
@@ -153,6 +177,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
+  enqueue(p);
 
   release(&ptable.lock);
 }
@@ -220,6 +245,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  enqueue(np);
 
   release(&ptable.lock);
 
@@ -320,6 +346,24 @@ wait(void)
   }
 }
 
+struct proc*
+sched_RR(void) 
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != RUNNABLE)
+      continue;
+    return p;
+  }
+  return 0;
+}
+
+struct proc*
+sched_FIFO(void)
+{
+  return dequeue();
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -341,9 +385,11 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
+    p = sched_FIFO();
+    if (!p) {
+    // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    //   if(p->state != RUNNABLE)
+    //     continue;
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -389,6 +435,7 @@ scheduler(void)
       swtch(&(c->scheduler), p->context);
       switchkvm();
 
+      enqueue(p);
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
@@ -503,8 +550,10 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+    if(p->state == SLEEPING && p->chan == chan) {
       p->state = RUNNABLE;
+      enqueue(p);
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -529,8 +578,10 @@ kill(int pid)
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
+      if(p->state == SLEEPING) {
         p->state = RUNNABLE;
+        enqueue(p);
+      }
       release(&ptable.lock);
       return 0;
     }
