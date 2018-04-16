@@ -253,8 +253,8 @@ exit(void)
   curproc->cwd = 0;
 
   cprintf("in exit, process name: %s, pid: %d parentpid: %d\n", curproc->name, curproc->pid, curproc->parent->pid);
-  // Send SIGCHILD signal to its parent process
-  sigsend(curproc->parent->pid, SIGCHILD);
+  // Send SIGCHILDEXIT signal to its parent process
+  sigsend(curproc->parent->pid, SIGCHILDEXIT);
   
   acquire(&ptable.lock);
 
@@ -369,8 +369,8 @@ scheduler(void)
           if (p->signal & mask) {
             if (*handler == 0) {
               switch(mask) {
-                case 4: sigchild(); break;
-                case 2: siguser(); break;
+                case 4: sigchildexit(); break;
+                case 2: sigkillchild(); break;
                 case 1: sigint(); break;
                 default: break;
               }
@@ -593,22 +593,40 @@ register_handler(sighandler_t sighandler)
 }
 
 void sigint() {
+  cprintf("IN SIGINT %d\n" , myproc()->pid);
   myproc()->killed = 1;
 }
 
-void siguser() {
-  cprintf("SIGUSER %d\n", myproc()->pid);
-}
-
-void sigchild() {
-  cprintf("SIGCHILD (one of my child terminated) %d\n", myproc()->pid);
-}
-
-void killcurproc() {
-  struct proc *p;
+void sigkillchild() {
+  struct proc *p, *curproc = myproc();
+  cprintf("IN SIGKILLCHILD %d\n",curproc->pid);
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    if ((p != initproc) && p->pid != 2 && p->state == SLEEPING) { //FIXME: state
+    if(p->state == UNUSED)
+      continue;
+
+    if (p->parent->pid == curproc->pid) {
+      cprintf("I'M A CHILD %d", p->pid);
+      sigsend(p->pid, SIGINT);
+    }
+  }
+}
+
+void sigchildexit() {
+  cprintf("SIGCHILDEXIT (one of my child terminated) %d\n", myproc()->pid);
+}
+
+void killcurproc(void) {
+  struct proc *p;
+  cprintf("IN KILLCURPROC\n");
+
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == UNUSED)
+      continue;
+      
+    if ((p != initproc) && (p->pid != 2)) { //FIXME: state
+      cprintf("IN KILLCURPROC LOOP %d\n",p->pid);
+      sigsend(p->pid, SIGKILLCHILD);
       sigsend(p->pid, SIGINT);
       break;
     }
@@ -630,17 +648,13 @@ sigsend(int pid, int signum)
 {
   struct proc *p;
   
-  acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
       p->signal |= (1 << signum);
-      release(&ptable.lock);
       return 0;
     }
   }
-  
-  
-  release(&ptable.lock);
+
   return -1;
 }
 

@@ -59,8 +59,8 @@ struct proc {
 
 void register_handler(sighandler_t sighandler);
 void sigint();
-void siguser();
-void sigchild();
+void sigkillchild();
+void sigchildexit();
 
 void* memcpy(void *dst, const void *src, uint n);
 

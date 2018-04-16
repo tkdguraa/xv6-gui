@@ -194,6 +194,6 @@ void            clearpteu(pde_t *pgdir, char *uva);
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
 
 // signal macros
-#define SIGINT      0
-#define SIGUSER     1
-#define SIGCHILD    2
+#define SIGINT           0
+#define SIGKILLCHILD     1
+#define SIGCHILDEXIT     2
