@@ -5,11 +5,16 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
+#include "VBE.h"
 
+
+//static void kShowVBEModeInfo(void);
 static void startothers(void);
 static void mpmain(void)  __attribute__((noreturn));
 extern pde_t *kpgdir;
 extern char end[]; // first address after kernel loaded from ELF file
+void test(void);
+void vesamodeinit();
 
 // Bootstrap processor starts running C code here.
 // Allocate a real stack and switch to it, first
@@ -17,6 +22,7 @@ extern char end[]; // first address after kernel loaded from ELF file
 int
 main(void)
 {
+ 
   kinit1(end, P2V(4*1024*1024)); // phys page allocator
   kvmalloc();      // kernel page table
   mpinit();        // detect other processors
@@ -31,12 +37,34 @@ main(void)
   binit();         // buffer cache
   fileinit();      // file table
   ideinit();       // disk 
+
+  
   startothers();   // start other processors
+
   kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
   userinit();      // first user process
-  mpmain();        // finish this processor's setup
+  vesamodeinit(); 
+  test(); 
+  mpmain();        // finish this processor's setup 
+  
 }
+typedef ushort COLOR;
 
+// ushort RGB(int r,int g,int b){
+// 	return ((b / 8)+((g / 4)<<5)+((r / 8)<<11));
+// }
+#define RGB(r,g,b) (((uchar)(r)>>3)<<11|(((uchar)(g)>>2))<<5|((uchar)(b)>>3))
+void kDrawPixel(uint iX,uint iY,COLOR stColor)
+{
+   *((ushort *)(((COLOR*)VESA_ADDR) + SCREEN_WIDTH * iY + iX)) = stColor;
+    cprintf("%x -----\n",(((COLOR*)VESA_ADDR) + SCREEN_WIDTH * iY + iX));
+}
+void test()
+{
+  for(int i=1;i<2;i++)
+  for(int j=1;j<800;j++)
+  kDrawPixel(j,i,RGB(255,255,255));
+}
 // Other CPUs jump here from entryother.S.
 static void
 mpenter(void)
@@ -45,8 +73,19 @@ mpenter(void)
   seginit();
   lapicinit();
   mpmain();
+ 
 }
-
+void vesamodeinit()
+{
+  SCREEN_PHYSADDR = (ushort*)(*((uint*)P2V(0x1028)));
+	SCREEN_WIDTH = *((ushort*)P2V(0x1012));
+	SCREEN_HEIGHT = *((ushort*)P2V(0x1014));
+  VESA_ADDR=SCREEN_PHYSADDR;
+  
+  cprintf("%x\n",SCREEN_PHYSADDR);
+  cprintf("%d\n",SCREEN_HEIGHT);
+  cprintf("%d\n",SCREEN_WIDTH);
+}
 // Common CPU setup code.
 static void
 mpmain(void)
@@ -94,6 +133,7 @@ startothers(void)
   }
 }
 
+
 // The boot page table used in entry.S and entryother.S.
 // Page directories (and page tables) must start on page boundaries,
 // hence the __aligned__ attribute.
@@ -107,6 +147,9 @@ pde_t entrypgdir[NPDENTRIES] = {
   [KERNBASE>>PDXSHIFT] = (0) | PTE_P | PTE_W | PTE_PS,
 };
 
+
+
+    
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
