@@ -26,6 +26,7 @@ int uptime(void);
 int signal(int signum, sighandler_t handler);
 int sigsend(int pid, int signum);
 int cps(void);
+int chpr(int pid, int pr);
 
 
 // ulib.c

@@ -106,6 +106,7 @@ extern int sys_uptime(void);
 extern int sys_signal(void);
 extern int sys_sigsend(void);
 extern int sys_cps(void);
+extern int sys_chpr(void);
 
 
 static int (*syscalls[])(void) = {
@@ -133,6 +134,7 @@ static int (*syscalls[])(void) = {
 [SYS_signal]  sys_signal,
 [SYS_sigsend] sys_sigsend,
 [SYS_cps]     sys_cps,
+[SYS_chpr]    sys_chpr
 };
 
 void

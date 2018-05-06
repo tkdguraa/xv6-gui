@@ -50,19 +50,31 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
+  // choi
   uint signal;                 // A currently pending signal
   sighandler_t sighandlers[32];// Every entry is a pointer to a
                                // function (accepting no arguments and
                                // returning no value)
   int priority;                // Process Priority(0-20). Lower value, higher priority
+  uint reftime;                // Last reference time
+  int tick;
+  int mlq_level;                 // MLQ queue level
 };
 
+// choi
 void register_handler(sighandler_t sighandler);
 void sigint();
 void sigkillchild();
 void sigchildexit();
 
 void* memcpy(void *dst, const void *src, uint n);
+
+#define SCHED_DEFAULT   0
+#define SCHED_FIFO      1
+#define SCHED_RR        2
+#define SCHED_PRIORITY  3
+#define SCHED_MLQ       4
+int SCHED_TYPE;
 
 // Process memory is laid out contiguously, low addresses first:
 //   text
