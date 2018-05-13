@@ -120,6 +120,11 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             signal(int signum, sighandler_t handler);
+int             sigsend(int pid, int signum);
+int             cps(void);
+void            killcurproc(void);
+int             chpr(int pid, int pr);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -188,3 +193,8 @@ void            clearpteu(pde_t *pgdir, char *uva);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+// signal macros
+#define SIGINT           0
+#define SIGKILLCHILD     1
+#define SIGCHILDEXIT     2

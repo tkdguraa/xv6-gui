@@ -131,9 +131,9 @@ runcmd(struct cmd *cmd)
 }
 
 int
-getcmd(char *buf, int nbuf)
+getcmd(char *buf, int nbuf, char *cur_dir)
 {
-  printf(2, "$ ");
+  printf(2, "%s> ", cur_dir);
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if(buf[0] == 0) // EOF
@@ -146,6 +146,7 @@ main(void)
 {
   static char buf[100];
   int fd;
+  char cur_dir[100];
 
   // Ensure that three file descriptors are open.
   while((fd = open("console", O_RDWR)) >= 0){
@@ -156,14 +157,26 @@ main(void)
   }
 
   // Read and run input commands.
-  while(getcmd(buf, sizeof(buf)) >= 0){
+  while(getcmd(buf, sizeof(buf), cur_dir) >= 0){
     if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
       // Chdir must be called by the parent, not the child.
       buf[strlen(buf)-1] = 0;  // chop \n
       if(chdir(buf+3) < 0)
         printf(2, "cannot cd %s\n", buf+3);
+      // Represent current working directory
+      else if ((buf[3] == '.' && buf[4] == '.' && buf[5] == '/')){  // "cd ../"
+        int del_index = strfindfromback(cur_dir, '/');
+        if (del_index >= 0)
+          memset(cur_dir + del_index, 0, strlen(cur_dir) - del_index);
+      }
+      else if (buf[3] != '.'){
+        cur_dir[strlen(cur_dir)] = '/';
+        strcpy(cur_dir + strlen(cur_dir), buf + 3);
+      }
+
       continue;
     }
+
     if(fork1() == 0)
       runcmd(parsecmd(buf));
     wait();

@@ -100,11 +100,25 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();
 
+  // choi - yield CPU or not
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
-  if(myproc() && myproc()->state == RUNNING &&
-     tf->trapno == T_IRQ0+IRQ_TIMER)
-    yield();
+  if (SCHED_TYPE != SCHED_FIFO) { // FIFO do not yield CPU
+    if(myproc() && myproc()->state == RUNNING &&
+    tf->trapno == T_IRQ0+IRQ_TIMER) {
+      if (SCHED_TYPE == SCHED_RR || SCHED_TYPE == SCHED_PRIORITY)
+        yield();
+      else { // SCHED_MLQ
+        if (myproc()->tick >= myproc()->mlq_level * 20) {
+          myproc()->tick = 0;
+          yield();
+        } 
+        else {
+          myproc()->tick++;
+        }
+      }
+     }
+  }
 
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)

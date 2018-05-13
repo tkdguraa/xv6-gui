@@ -23,6 +23,11 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int signal(int signum, sighandler_t handler);
+int sigsend(int pid, int signum);
+int cps(void);
+int chpr(int pid, int pr);
+
 
 // ulib.c
 int stat(char*, struct stat*);
@@ -37,3 +42,5 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+
+int strfindfromback(char *s, const char c);
