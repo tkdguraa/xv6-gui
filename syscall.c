@@ -144,6 +144,7 @@ syscall(void)
   struct proc *curproc = myproc();
 
   num = curproc->tf->eax;
+  curproc->priority = 3; // choi - system call default pirority
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     curproc->tf->eax = syscalls[num]();
   } else {

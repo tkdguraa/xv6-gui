@@ -56,9 +56,10 @@ struct proc {
                                // function (accepting no arguments and
                                // returning no value)
   int priority;                // Process Priority(0-20). Lower value, higher priority
-  uint reftime;                // Last reference time
-  int tick;
-  int mlq_level;                 // MLQ queue level
+  uint in_time;                // Time that the process entered the ready queue (RUNNABLE state)
+  int tick;                    // Count the process used how many CPU time (interrupt timer time)
+                               // For the purpose of FIFO and MLQ scheduling 
+  int mlq_level;               // MLQ queue level
 };
 
 // choi
@@ -69,9 +70,8 @@ void sigchildexit();
 
 void* memcpy(void *dst, const void *src, uint n);
 
-#define SCHED_DEFAULT   0
-#define SCHED_FIFO      1
-#define SCHED_RR        2
+#define SCHED_RR        1
+#define SCHED_FIFO      2
 #define SCHED_PRIORITY  3
 #define SCHED_MLQ       4
 int SCHED_TYPE;

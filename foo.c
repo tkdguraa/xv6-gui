@@ -11,13 +11,13 @@ main(int argc, char *argv[])
 	double res, i, stride;
 
 	if(argc < 2)
-		n = 1;	// default child process num
+		n = 2;	// default child process num
 	else
 		n = atoi(argv[1]); // child process num
 	if(n < 0 || n > 20)
 		n = 2;
 	if(argc < 3)
-		stride = 1.0;	// default stride
+		stride = 0.01;	// default stride
 	else	
 		stride = atoi(argv[2]);	// stride
 
