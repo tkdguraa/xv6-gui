@@ -6,15 +6,12 @@
 #include "proc.h"
 #include "x86.h"
 #include "VBE.h"
-
-
-//static void kShowVBEModeInfo(void);
+#include "Graphics.h"
+#include "mouse.h"
 static void startothers(void);
 static void mpmain(void)  __attribute__((noreturn));
 extern pde_t *kpgdir;
 extern char end[]; // first address after kernel loaded from ELF file
-void test(void);
-void vesamodeinit();
 
 // Bootstrap processor starts running C code here.
 // Allocate a real stack and switch to it, first
@@ -22,48 +19,43 @@ void vesamodeinit();
 int
 main(void)
 {
- 
+  cprintf("hahagood");
   kinit1(end, P2V(4*1024*1024)); // phys page allocator
   kvmalloc();      // kernel page table
-  mpinit();        // detect other processors
-  lapicinit();     // interrupt controller
-  seginit();       // segment descriptors
-  picinit();       // disable pic
+  mpinit();        // collect info about this machine
+  lapicinit();
+  seginit();       // set up segments
+
+  cprintf("\ncpu%d: starting xv6\n\n", cpu->id);
+  picinit();       // interrupt controller
   ioapicinit();    // another interrupt controller
-  consoleinit();   // console hardware
+  consoleinit();   // I/O devices & their interrupts
   uartinit();      // serial port
   pinit();         // process table
   tvinit();        // trap vectors
   binit();         // buffer cache
   fileinit();      // file table
-  ideinit();       // disk 
-
+  iinit();
+  ideinit();       // disk
   
+  vesamodeinit();
+  test();
+ 
+  if(!ismp)
+    timerinit();   // uniprocessor timer
   startothers();   // start other processors
-
   kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
   userinit();      // first user process
-  vesamodeinit(); 
-  test(); 
-  mpmain();        // finish this processor's setup 
+  // Finish setting up this processor in mpmain.
   
-}
-typedef ushort COLOR;
-
-// ushort RGB(int r,int g,int b){
-// 	return ((b / 8)+((g / 4)<<5)+((r / 8)<<11));
-// }
-#define RGB(r,g,b) (((uchar)(r)>>3)<<11|(((uchar)(g)>>2))<<5|((uchar)(b)>>3))
-void kDrawPixel(uint iX,uint iY,COLOR stColor)
-{
-   *((ushort *)(((COLOR*)VESA_ADDR) + SCREEN_WIDTH * iY + iX)) = stColor;
-    cprintf("%x -----\n",(((COLOR*)VESA_ADDR) + SCREEN_WIDTH * iY + iX));
+  mpmain();
 }
 void test()
 {
-  for(int i=1;i<2;i++)
-  for(int j=1;j<800;j++)
-  kDrawPixel(j,i,RGB(255,255,255));
+  Draw_Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,RGB(255,255,255),1);
+  //Windows(50,50,600,400,"hello");
+  mouseinit();
+  Draw_Mouse(514,300);
 }
 // Other CPUs jump here from entryother.S.
 static void
@@ -73,26 +65,15 @@ mpenter(void)
   seginit();
   lapicinit();
   mpmain();
- 
 }
-void vesamodeinit()
-{
-  SCREEN_PHYSADDR = (ushort*)(*((uint*)P2V(0x1028)));
-	SCREEN_WIDTH = *((ushort*)P2V(0x1012));
-	SCREEN_HEIGHT = *((ushort*)P2V(0x1014));
-  VESA_ADDR=SCREEN_PHYSADDR;
-  
-  cprintf("%x\n",SCREEN_PHYSADDR);
-  cprintf("%d\n",SCREEN_HEIGHT);
-  cprintf("%d\n",SCREEN_WIDTH);
-}
+
 // Common CPU setup code.
 static void
 mpmain(void)
 {
-  cprintf("cpu%d: starting %d\n", cpuid(), cpuid());
+  cprintf("cpu%d: starting\n", cpu->id);
   idtinit();       // load idt register
-  xchg(&(mycpu()->started), 1); // tell startothers() we're up
+  xchg(&cpu->started, 1); // tell startothers() we're up
   scheduler();     // start running processes
 }
 
@@ -110,11 +91,11 @@ startothers(void)
   // Write entry code to unused memory at 0x7000.
   // The linker has placed the image of entryother.S in
   // _binary_entryother_start.
-  code = P2V(0x7000);
+  code = p2v(0x7000);
   memmove(code, _binary_entryother_start, (uint)_binary_entryother_size);
 
   for(c = cpus; c < cpus+ncpu; c++){
-    if(c == mycpu())  // We've started already.
+    if(c == cpus+cpunum())  // We've started already.
       continue;
 
     // Tell entryother.S what stack to use, where to enter, and what
@@ -123,9 +104,9 @@ startothers(void)
     stack = kalloc();
     *(void**)(code-4) = stack + KSTACKSIZE;
     *(void**)(code-8) = mpenter;
-    *(int**)(code-12) = (void *) V2P(entrypgdir);
+    *(int**)(code-12) = (void *) v2p(entrypgdir);
 
-    lapicstartap(c->apicid, V2P(code));
+    lapicstartap(c->id, v2p(code));
 
     // wait for cpu to finish mpmain()
     while(c->started == 0)
@@ -133,12 +114,10 @@ startothers(void)
   }
 }
 
-
-// The boot page table used in entry.S and entryother.S.
-// Page directories (and page tables) must start on page boundaries,
-// hence the __aligned__ attribute.
-// PTE_PS in a page directory entry enables 4Mbyte pages.
-
+// Boot page table used in entry.S and entryother.S.
+// Page directories (and page tables), must start on a page boundary,
+// hence the "__aligned__" attribute.
+// Use PTE_PS in page directory entry to enable 4Mbyte pages.
 __attribute__((__aligned__(PGSIZE)))
 pde_t entrypgdir[NPDENTRIES] = {
   // Map VA's [0, 4MB) to PA's [0, 4MB)
@@ -147,13 +126,9 @@ pde_t entrypgdir[NPDENTRIES] = {
   [KERNBASE>>PDXSHIFT] = (0) | PTE_P | PTE_W | PTE_PS,
 };
 
-
-
-    
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
 // Blank page.
-
