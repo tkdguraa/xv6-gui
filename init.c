@@ -5,7 +5,7 @@
 #include "user.h"
 #include "fcntl.h"
 
-char *argv[] = { "desktop", 0 };
+char *argv[] = { "sh", 0 };
 
 int
 main(void)

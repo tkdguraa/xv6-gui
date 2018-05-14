@@ -7,6 +7,7 @@
 #include "param.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "sleeplock.h"
 #include "fs.h"
 #include "file.h"
 #include "memlayout.h"
@@ -107,10 +108,11 @@ panic(char *s)
 {
   int i;
   uint pcs[10];
-  
+
   cli();
   cons.locking = 0;
-  cprintf("cpu%d: panic: ", cpu->id);
+  // use lapiccpunum so that we can call panic from mycpu()
+  cprintf("lapicid %d: panic: ", lapicid());
   cprintf(s);
   cprintf("\n");
   getcallerpcs(&s, pcs);
@@ -130,7 +132,7 @@ static void
 cgaputc(int c)
 {
   int pos;
-  
+
   // Cursor position: col + 80*row.
   outb(CRTPORT, 14);
   pos = inb(CRTPORT+1) << 8;
@@ -146,13 +148,13 @@ cgaputc(int c)
 
   if(pos < 0 || pos > 25*80)
     panic("pos under/overflow");
-  
+
   if((pos/80) >= 24){  // Scroll up.
     memmove(crt, crt+80, sizeof(crt[0])*23*80);
     pos -= 80;
     memset(crt+pos, 0, sizeof(crt[0])*(24*80 - pos));
   }
-  
+
   outb(CRTPORT, 14);
   outb(CRTPORT+1, pos>>8);
   outb(CRTPORT, 15);
@@ -195,26 +197,27 @@ consoleintr(int (*getc)(void))
   while((c = getc()) >= 0){
     switch(c){
     case C('P'):  // Process listing.
-      doprocdump = 1;   // procdump() locks cons.lock indirectly; invoke later
+      // procdump() locks cons.lock indirectly; invoke later
+      doprocdump = 1;
       break;
     case C('U'):  // Kill line.
       while(input.e != input.w &&
             input.buf[(input.e-1) % INPUT_BUF] != '\n'){
         input.e--;
-//        consputc(BACKSPACE);
+        consputc(BACKSPACE);
       }
       break;
     case C('H'): case '\x7f':  // Backspace
       if(input.e != input.w){
         input.e--;
-//        consputc(BACKSPACE);
+        consputc(BACKSPACE);
       }
       break;
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
         c = (c == '\r') ? '\n' : c;
         input.buf[input.e++ % INPUT_BUF] = c;
-//        consputc(c);
+        consputc(c);
         if(c == '\n' || c == C('D') || input.e == input.r+INPUT_BUF){
           input.w = input.e;
           wakeup(&input.r);
@@ -240,7 +243,7 @@ consoleread(struct inode *ip, char *dst, int n)
   acquire(&cons.lock);
   while(n > 0){
     while(input.r == input.w){
-      if(proc->killed){
+      if(myproc()->killed){
         release(&cons.lock);
         ilock(ip);
         return -1;
@@ -291,7 +294,6 @@ consoleinit(void)
   devsw[CONSOLE].read = consoleread;
   cons.locking = 1;
 
-  picenable(IRQ_KBD);
   ioapicenable(IRQ_KBD, 0);
 }
 

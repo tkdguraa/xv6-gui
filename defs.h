@@ -6,32 +6,9 @@ struct pipe;
 struct proc;
 struct rtcdate;
 struct spinlock;
+struct sleeplock;
 struct stat;
 struct superblock;
-struct RGB;
-struct RGBA;
-struct message;
-
-// gui_kernal.c
-void            guiKernelHandleMsg(struct message *);
-void            initGUIKernel(void);
-
-// gui.c
-extern struct RGB* screen;
-extern struct RGB* screen_withoutFocus;
-extern struct RGB* screen_withoutMouse;
-void            drawMouse(struct RGB *buf, int mode, int x, int y);
-void            clearMouse(struct RGB *buf, struct RGB *temp_buf, int x, int y);
-void            initGUI(void);
-int             drawCharacter(struct RGB*, int, int, char, struct RGBA);
-void            drawString(struct RGB*, int, int, char *, struct RGBA);
-void            draw24Image(struct RGB *, struct RGB *, int , int , int , int);
-void            drawRGBContentToContent(struct RGB *, struct RGB *, int , int , int , int, int*);
-void drawRGBContentToContentPart(struct RGB *,struct RGB *, int, int,
-    int, int, int, int, int, int, int*);
-void drawScreenToScreen(struct RGB*, struct RGB*);
-int             drawCharacterToContent(struct RGB*, int, int,int,int, char, struct RGBA);
-void            drawStringToContent(struct RGB*, int, int, int, int, char *, struct RGBA);
 
 // bio.c
 void            binit(void);
@@ -63,7 +40,7 @@ int             dirlink(struct inode*, char*, uint);
 struct inode*   dirlookup(struct inode*, char*, uint*);
 struct inode*   ialloc(uint, short);
 struct inode*   idup(struct inode*);
-void            iinit(void);
+void            iinit(int dev);
 void            ilock(struct inode*);
 void            iput(struct inode*);
 void            iunlock(struct inode*);
@@ -97,7 +74,7 @@ void            kbdintr(void);
 
 // lapic.c
 void            cmostime(struct rtcdate *r);
-int             cpunum(void);
+int             lapicid(void);
 extern volatile uint*    lapic;
 void            lapiceoi(void);
 void            lapicinit(void);
@@ -105,17 +82,14 @@ void            lapicstartap(uchar, uint);
 void            microdelay(int);
 
 // log.c
-void            initlog(void);
+void            initlog(int dev);
 void            log_write(struct buf*);
 void            begin_op();
 void            end_op();
 
 // mp.c
 extern int      ismp;
-int             mpbcpu(void);
 void            mpinit(void);
-void            mpstartthem(void);
-
 
 // picirq.c
 void            picenable(int);
@@ -129,15 +103,18 @@ int             pipewrite(struct pipe*, char*, int);
 
 //PAGEBREAK: 16
 // proc.c
-struct proc*    copyproc(struct proc*);
+int             cpuid(void);
 void            exit(void);
 int             fork(void);
 int             growproc(int);
 int             kill(int);
+struct cpu*     mycpu(void);
+struct proc*    myproc();
 void            pinit(void);
 void            procdump(void);
 void            scheduler(void) __attribute__((noreturn));
 void            sched(void);
+void            setproc(struct proc*);
 void            sleep(void*, struct spinlock*);
 void            userinit(void);
 int             wait(void);
@@ -156,6 +133,12 @@ void            release(struct spinlock*);
 void            pushcli(void);
 void            popcli(void);
 
+// sleeplock.c
+void            acquiresleep(struct sleeplock*);
+void            releasesleep(struct sleeplock*);
+int             holdingsleep(struct sleeplock*);
+void            initsleeplock(struct sleeplock*, char*);
+
 // string.c
 int             memcmp(const void*, const void*, uint);
 void*           memmove(void*, const void*, uint);
@@ -164,7 +147,6 @@ char*           safestrcpy(char*, const char*, int);
 int             strlen(const char*);
 int             strncmp(const char*, const char*, uint);
 char*           strncpy(char*, const char*, int);
-
 
 // syscall.c
 int             argint(int, int*);
@@ -176,7 +158,6 @@ void            syscall(void);
 
 // timer.c
 void            timerinit(void);
-int             timerintr(uint);
 
 // trap.c
 void            idtinit(void);
@@ -192,7 +173,6 @@ void            uartputc(int);
 // vm.c
 void            seginit(void);
 void            kvmalloc(void);
-void            vmenable(void);
 pde_t*          setupkvm(void);
 char*           uva2ka(pde_t*, char*);
 int             allocuvm(pde_t*, uint, uint);
