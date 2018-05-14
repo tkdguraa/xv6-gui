@@ -8,6 +8,7 @@
 #include "VBE.h"
 #include "Graphics.h"
 #include "mouse.h"
+#include "spinlock.h"
 static void startothers(void);
 static void mpmain(void)  __attribute__((noreturn));
 extern pde_t *kpgdir;
@@ -50,12 +51,39 @@ main(void)
   
   mpmain();
 }
+struct spinlock *tps;
 void test()
 {
   Draw_Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,RGB(255,255,255),1);
   //Windows(50,50,600,400,"hello");
   mouseinit();
+  int iX=514;
+  int iY=300;
   Draw_Mouse(514,300);
+  uchar temp;
+  int x,y;
+  while(1)
+  {
+    if(getmousefromqueue(&temp,&x,&y)==0)
+    {
+      sleep(0,&tps);
+      continue;
+    }
+   Draw_Rect(iX,iY,iX+MOUSE_WIDTH,iY+MOUSE_HEIGHT,RGB(255,255,255),1);
+    iX=iX+x;
+    iY=iY+y;
+    if(iX<0)
+    iX=0;
+    else if(iX>SCREEN_WIDTH)
+    iX=SCREEN_WIDTH;
+    if(iY<0)
+    iY=0;
+    else if(iY>SCREEN_HEIGHT)
+    iY=SCREEN_HEIGHT;
+    Draw_Mouse(iX,iY);
+   
+    
+  }
 }
 // Other CPUs jump here from entryother.S.
 static void

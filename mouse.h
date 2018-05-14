@@ -5,6 +5,9 @@
 #include  "spinlock.h"
 #define MOUSE_WIDTH 20
 #define MOUSE_HEIGHT 20
+#define MOUSE_LBUTTONDOWN 0x01
+#define MOUSE_RBUTTONDOWN 0x02
+
 typedef struct mousemove
 {
     uchar flag;

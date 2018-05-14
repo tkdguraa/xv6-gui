@@ -17,7 +17,7 @@ int JudQueFull(const queue* que)
 {
     if(que->putindex==que->getindex&&que->jud==1)
     return 1;
-    else
+    
     return 0;
 }
 //judge that if queue is empty
@@ -25,7 +25,7 @@ int JudQueEmpty(const queue* que)
 {
     if(que->putindex==que->getindex&&que->jud==0)
     return 1;
-    else
+
     return 0;
 }
 int PutQueue(queue* que,const void* data)
@@ -40,7 +40,7 @@ int PutQueue(queue* que,const void* data)
 }
 int GetQueue(queue* que,void* data)
 {
-    if(JudQueEmpty(&que)==1)
+    if(JudQueEmpty(que)==1)
     return 0;
    // cprintf("is getqueue working?");
     memcpy(data,(char*)que->Array+(que->size*que->getindex),que->size);

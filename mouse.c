@@ -61,7 +61,7 @@ void mouseinit()
      if(JudinbFull()==0)
         break;
     outb( 0x64 , 0xa8 );
-
+    outb( 0x64 , 0xd4 );
     for(int i=0;i<0xffff;i++)
      if(JudinbFull()==0)
         break;
@@ -79,7 +79,7 @@ void mouseinit()
      if(JudinbFull()==0)
         break;
     outb(0x60,data);
-     outb( 0x64 , 0xd4 );
+ 
 
     for(int i=0;i<0xffff;i++)
      if(JudinbFull()==0)
@@ -121,19 +121,20 @@ void movemouse()
     else if(iY>SCREEN_HEIGHT)
     iY=SCREEN_HEIGHT;
     Draw_Mouse(iX,iY);
+   
     }
   }
+
 }
 void mouseintr()
 {
     uchar temp;
     if(JudoutbFull()==1)
     {
-     temp=scan();
      if(JudmouseData()==1)
      {
+        temp=scan();
         putmouseintoqueue(temp);
-        movemouse();
      }
     }
 }
@@ -141,6 +142,7 @@ BOOL putmouseintoqueue(uchar mousedata)
 {
     uchar res;
    // cprintf("put mouse into queue\n");
+
     switch(mouseSt.byct)
     {
         case 0:
@@ -174,6 +176,10 @@ BOOL getmousefromqueue(uchar* status,int* x,int* y)
    // cprintf("getmouse from queue\n");
     mouseDT data;
     uchar res;
+     if(JudQueEmpty(&mousequeue)==1)
+    {
+        return 0;
+    }
     acquire(&mouseSt.SpinLock);
     res=GetQueue(&mousequeue,&data);
     release(&mouseSt.SpinLock);
@@ -182,13 +188,13 @@ BOOL getmousefromqueue(uchar* status,int* x,int* y)
         return 0;
     }
 
-    status=data.flag &07;
+    *status=data.flag &0x7;
     *x=data.x&0xff;
     if(data.flag&0x10)
     *x|=0xffffff00;
-    y=data.y&0xff;
+    *y=data.y&0xff;
     if(data.flag&0x20)
     *y|=0xffffff00;
-    y=-*y;
+    *y=-*y;
     return 1;
 }
