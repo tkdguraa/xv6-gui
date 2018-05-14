@@ -3,23 +3,23 @@
 #include "user.h"
 #include "param.h"
 
-// Memory allocator by Kernighan and Ritchie,
-// The C programming Language, 2nd ed.  Section 8.7.
-
 typedef long Align;
 
 union header {
-  struct {
-    union header *ptr;
-    uint size;
-  } s;
-  Align x;
+	struct {
+		union header *ptr;
+		uint size;
+	} s;
+	Align x;
 };
 
 typedef union header Header;
 
 static Header base;
 static Header *freep;
+
+// Memory allocator by Kernighan and Ritchie,
+// The C programming Language, 2nd ed.  Section 8.7.
 
 void
 free(void *ap)

@@ -2,6 +2,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 
+
 # Start the first CPU: switch to 32-bit protected mode, jump into C.
 # The BIOS loads this code from the first sector of the hard disk into
 # memory at physical address 0x7c00 and starts executing in real mode
@@ -11,6 +12,18 @@
 .globl start
 start:
   cli                         # BIOS enabled interrupts; disable
+  
+setupsvga:
+  movb    $0x4f,%ah
+  movb    $0x01,%al
+  movw    $0x4117,%cx
+  movw    $0x1000,%di
+  int     $0x10
+
+  movb    $0x4f,%ah
+  movb    $0x02,%al
+  movw    $0x4117,%bx
+  int     $0x10
 
   # Zero data segment registers DS, ES, and SS.
   xorw    %ax,%ax             # Set %ax to zero
@@ -45,7 +58,7 @@ seta20.2:
   movl    %eax, %cr0
 
 //PAGEBREAK!
-  # Complete the transition to 32-bit protected mode by using a long jmp
+  # Complete transition to 32-bit protected mode by using long jmp
   # to reload %cs and %eip.  The segment descriptors are set up with no
   # translation, so that the mapping is still the identity mapping.
   ljmp    $(SEG_KCODE<<3), $start32
