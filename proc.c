@@ -264,7 +264,7 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
-  memcpy(np->sighandlers, curproc->sighandlers, 32);
+  memcpy(np->sighandlers, curproc->sighandlers, 32); // choi
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -281,7 +281,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  np->in_time = ticks; // choi
+  np->in_time = ticks; // choi - time that state is changed into RUNNABLE
 
   // choi - change sh proc's priority to 3
   if(np->name[0] == 's' && np->name[1] == 'h')
@@ -386,94 +386,6 @@ wait(void)
   }
 }
 
-// choi
-struct proc*
-sched_default(struct proc* p_prev) // xv6 default scheduler
-{
-  struct proc* p = p_prev++;
-  if (p == 0 || p == &ptable.proc[NPROC-1]) // if p is null or p is the last process
-    p = ptable.proc;
-  for(; p < &ptable.proc[NPROC]; p++){  // from p to the last process
-    if(p->state == RUNNABLE)
-      return p;
-  }
-  for(p = ptable.proc; p <= p_prev; p++){ // from the first process to p_prev
-    if(p->state == RUNNABLE)
-      return p;
-  }
-  return 0;
-}
-
-// choi
-// struct proc*
-// sched_RR(void)
-// {
-//   int mint = ticks;
-//   struct proc* p;
-//   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-//     if(p->state == RUNNABLE && p->reftime < mint)
-//       mint = p->reftime;
-//   }
-//   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-//     if(p->state != RUNNABLE || p->reftime > mint)
-//       continue;
-//     return p;
-//   }
-//   return 0;
-// }
-
-// choi
-struct proc*
-sched_priority(void)
-{
-  int minp = 20; // minimum priority
-  struct proc* p;
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    if (p->state == RUNNABLE && p->priority < minp)
-      minp = p->priority;
-  }
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->state != RUNNABLE || p->priority > minp)
-      continue;
-    return p;
-  }
-  return 0;
-}
-
-// choi
-struct proc*
-sched_MLQ(void)
-{
-  struct proc* p;
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) { // 1Level priority process
-    if (p->state == RUNNABLE && p->priority < 5){
-      p->priority += 1;
-      p->mlq_level = 1;
-      return p;
-    }
-  }
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) { // 2Level priority process
-    if (p->state == RUNNABLE && p->priority < 10) {
-      p->priority += 1;
-      p->mlq_level = 2;
-      return p;
-    }
-  }
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) { // 3Level priority process
-    if (p->state == RUNNABLE && p->priority < 15) {
-      p->priority += 1;
-      p->mlq_level = 3;
-      return p;
-    }
-  }
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) { // 4Level priority process
-    if (p->state == RUNNABLE && p->priority < 21) {
-      p->mlq_level = 4;
-      return p;
-    }
-  }
-  return 0;
-}
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.

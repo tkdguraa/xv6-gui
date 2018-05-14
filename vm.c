@@ -342,6 +342,46 @@ bad:
   return 0;
 }
 
+// choi - copy-on-write fork
+pde_t*
+cowuvm(pde_t *pgdir, uint sz)
+{
+  pde_t *d;
+  pte_t *pte;
+  uint pa, i, flags;
+  char *mem;
+
+  if((d = setupkvm()) == 0)
+    return 0;
+  for(i = 0; i < sz; i += PGSIZE){
+    if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
+      panic("cowuvm: pte should exist");
+    if(!(*pte & PTE_P))
+      panic("cowuvm: page not present");
+    
+    // Converts each writeable page table entry in the parent to read-only and cow
+    *pte &= ~PTE_W;
+    *pte |= PTE_COW;
+
+    pa = PTE_ADDR(*pte);
+    flags = PTE_FLAGS(*pte);
+    if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0)
+      goto bad;
+    // For each page that is shared copy-on-write
+    // we need to increase the refernce count.
+    increase_ref_count(pa);
+  }
+  lcr3(V2P(pgdir)); // Flush TLB for original process
+  return d;
+
+bad:
+  freevm(d);
+  // choi - Even though we failed to copy, we should flush TLB, since
+  // some entries in the original process page table have been changed
+  lcr3(V2P(pgdir));
+  return 0;
+}
+
 //PAGEBREAK!
 // Map user virtual address to kernel address.
 char*
@@ -383,6 +423,81 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+// choi - copy-on-write page fault handler
+void
+pagefault()
+{
+  pte_t *pte;
+  struct proc *proc = myproc();
+  uint pa,          // faulty page's physical address
+       npa,         // new page's physical address
+       va = rcr2(), // Get the faulty page's virtual address from the CR2 register
+       err = proc->tf->err,
+       flags;
+  char *mem;
+
+  // Obtain the start of the page that the faulty virtual address belongs to
+  char *a = (char*)PGROUNDDOWN((uint)va);
+
+  // Not a write fault for a user address
+  if(!(err & FEC_WR)) {
+    proc->killed = 1;
+    return;
+  }
+
+  // Fault is not for user address, kill process
+  if(va >= KERNBASE || (pte = walkpgdir(proc->pgdir, a, 0)) == 0){
+    cprintf("pid %d %s: Page fault--access to invalid address.\n", proc->pid, proc->name);
+    proc->killed = 1;
+    return;
+  }
+
+  // Check if the fault is for an address whose page table includes the PTE_COW flag
+  // If not, kill the program as usual
+  if(!(*pte & PTE_COW)){
+    proc->killed = 1;
+    return;
+  }
+
+  // Get the physical address from the given page table entry
+  pa = PTE_ADDR(*pte);
+  flags = PTE_FLAGS(*pte);
+
+  // Get reference count for faulty page
+  int ref_count = get_ref_count(pa);
+
+  // Page has more than one reference
+  if(ref_count > 1){
+    // Allocate a new memory page for the process
+    if((mem = kalloc()) == 0) {
+      cprintf("Page fault out of memory, kill proc %s with pid %d\n", proc->name, proc->pid);
+      proc->killed = 1;
+      return;
+    }
+
+    // Copy the contents from the original memory page pointed the virtual address
+    memmove(mem, (char*)P2V(pa), PGSIZE);
+
+    // Physical address for new page
+    npa = v2p(mem);
+    // Point the pte pointer to the newly allocated page
+    *pte = npa | flags | PTE_P | PTE_W;
+
+    // Flush TLB for process since page table entries changed
+    lcr3(V2P(proc->pgdir));
+
+    // Decrement ref count for old page
+    decrease_ref_count(pa);
+  }
+  // Page has only one reference
+  else {
+    *pte |= PTE_W;
+    *pte &= ~PTE_COW;
+
+    // Flush TLB for process since page table entries changed
+    lcr3(V2P(proc->pgdir));
+  }
+}
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!

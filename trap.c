@@ -47,6 +47,11 @@ trap(struct trapframe *tf)
   }
 
   switch(tf->trapno){
+  // choi - register page fault handler
+  case T_PGFLT:
+    cprintf("PAGE FAULT OCCURED\n");
+    pagefault();
+    break; 
   case T_IRQ0 + IRQ_TIMER:
     if(cpuid() == 0){
       acquire(&tickslock);
