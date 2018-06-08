@@ -271,7 +271,11 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       if(pa == 0)
         panic("kfree");
       char *v = P2V(pa);
-      kfree(v);
+
+      if(get_ref_count(pa) == 1)
+        kfree(v);
+      else
+        decrease_ref_count(pa);
       *pte = 0;
     }
   }
@@ -342,7 +346,7 @@ bad:
   return 0;
 }
 
-// choi - copy-on-write fork
+// copy-on-write fork
 pde_t*
 cowuvm(pde_t *pgdir, uint sz)
 {
@@ -350,6 +354,8 @@ cowuvm(pde_t *pgdir, uint sz)
   pte_t *pte;
   uint pa, i, flags;
   char *mem;
+
+  cprintf("COW: in cowuvm\n");
 
   if((d = setupkvm()) == 0)
     return 0;
@@ -365,7 +371,10 @@ cowuvm(pde_t *pgdir, uint sz)
 
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
-    if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0)
+    if((mem = kalloc()) == 0)
+      goto bad;
+    memmove(mem, (char*)P2V(pa), PGSIZE);
+    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0)
       goto bad;
     // For each page that is shared copy-on-write
     // we need to increase the refernce count.
@@ -376,7 +385,7 @@ cowuvm(pde_t *pgdir, uint sz)
 
 bad:
   freevm(d);
-  // choi - Even though we failed to copy, we should flush TLB, since
+  // Even though we failed to copy, we should flush TLB, since
   // some entries in the original process page table have been changed
   lcr3(V2P(pgdir));
   return 0;
@@ -423,31 +432,35 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
-// choi - copy-on-write page fault handler
+// copy-on-write page fault handler
 void
-pagefault()
+page_fault()
 {
   pte_t *pte;
   struct proc *proc = myproc();
-  uint pa,          // faulty page's physical address
-       npa,         // new page's physical address
+  uint pa,          // Faulty page's physical address
+       npa,         // New page's physical address
        va = rcr2(), // Get the faulty page's virtual address from the CR2 register
        err = proc->tf->err,
        flags;
   char *mem;
 
+  cprintf("COW: in page fault handler\n");
+
   // Obtain the start of the page that the faulty virtual address belongs to
   char *a = (char*)PGROUNDDOWN((uint)va);
 
-  // Not a write fault for a user address
-  if(!(err & FEC_WR)) {
+  // Fault is not for user address, kill process
+  if(va >= KERNBASE || (pte = walkpgdir(proc->pgdir, a, 0)) == 0){
+    cprintf("pid %d %s: Page fault--Illegal virtual address on cpu %d addr 0x%x.\n",
+    proc->pid, proc->name, mycpu()->apicid, va);
     proc->killed = 1;
     return;
   }
 
-  // Fault is not for user address, kill process
-  if(va >= KERNBASE || (pte = walkpgdir(proc->pgdir, a, 0)) == 0){
-    cprintf("pid %d %s: Page fault--access to invalid address.\n", proc->pid, proc->name);
+  // Not a write fault for a user address
+  if(!(err & FEC_WR)) {
+    cprintf("pid %d %s: Page fault--Not a write fault for a user address.\n", proc->pid, proc->name);
     proc->killed = 1;
     return;
   }
@@ -455,6 +468,7 @@ pagefault()
   // Check if the fault is for an address whose page table includes the PTE_COW flag
   // If not, kill the program as usual
   if(!(*pte & PTE_COW)){
+    cprintf("pid %d %s: Page fault--Not including the PTE_COW flag.\n", proc->pid, proc->name);
     proc->killed = 1;
     return;
   }
@@ -462,12 +476,12 @@ pagefault()
   // Get the physical address from the given page table entry
   pa = PTE_ADDR(*pte);
   flags = PTE_FLAGS(*pte);
-
   // Get reference count for faulty page
   int ref_count = get_ref_count(pa);
+  cprintf("ref_count: %d\n", ref_count);
 
-  // Page has more than one reference
-  if(ref_count > 1){
+  // Page has one or more reference
+  if(ref_count >= 1){
     // Allocate a new memory page for the process
     if((mem = kalloc()) == 0) {
       cprintf("Page fault out of memory, kill proc %s with pid %d\n", proc->name, proc->pid);
@@ -479,7 +493,7 @@ pagefault()
     memmove(mem, (char*)P2V(pa), PGSIZE);
 
     // Physical address for new page
-    npa = v2p(mem);
+    npa = V2P(mem);
     // Point the pte pointer to the newly allocated page
     *pte = npa | flags | PTE_P | PTE_W;
 
@@ -488,12 +502,13 @@ pagefault()
 
     // Decrement ref count for old page
     decrease_ref_count(pa);
+    cprintf("Complete one page fault pid: %d, pname: %s\n", proc->pid, proc->name);
   }
-  // Page has only one reference
-  else {
+  // Page has no more reference
+  else if (get_ref_count(pa) == 0) {
     *pte |= PTE_W;
     *pte &= ~PTE_COW;
-
+    cprintf("Page has no reference  pid: %d, pname: %s\n", proc->pid, proc->name);
     // Flush TLB for process since page table entries changed
     lcr3(V2P(proc->pgdir));
   }

@@ -143,9 +143,9 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
 
-  // choi
   p->tick = 0;
-  p->priority = 5;     // Default priority
+  p->priority = 5; // Default priority
+  cprintf("Allocproc\n");
 
   release(&ptable.lock);
 
@@ -170,7 +170,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  p->signal = 0;                  // initizlize signal - choi
+  p->signal = 0;                  // initizlize signal
   memset(p->sighandlers, 0, 32);  // initialize signal handlers to 0 (NULL)
 
   return p;
@@ -210,10 +210,10 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-  p->in_time = ticks; // choi
+  p->in_time = ticks;
 
-  // choi - set schedule type
-  SCHED_TYPE = SCHED_MLQ;
+  // set schedule type
+  SCHED_TYPE = SCHED_RR;
 
   release(&ptable.lock);
 }
@@ -255,7 +255,7 @@ fork(void)
   }
 
   // Copy process state from proc.
-  if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+  if((np->pgdir = cowuvm(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
@@ -264,7 +264,7 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
-  memcpy(np->sighandlers, curproc->sighandlers, 32); // choi
+  memcpy(np->sighandlers, curproc->sighandlers, 32);
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -281,9 +281,9 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  np->in_time = ticks; // choi - time that state is changed into RUNNABLE
+  np->in_time = ticks; // time that state is changed into RUNNABLE
 
-  // choi - change sh proc's priority to 3
+  // change sh proc's priority to 3
   if(np->name[0] == 's' && np->name[1] == 'h')
     np->priority = 3;
 
@@ -398,10 +398,10 @@ void
 scheduler(void)
 {
   struct proc *p = ptable.proc;
-  struct proc *p2, *sched_proc;  // choi - for scheduling
+  struct proc *p2, *sched_proc;  // for scheduling
   struct cpu *c = mycpu();
-  int mint = 0; // choi - for FIFO scheduling
-  int flag;     // choi - for MLQ scheduling
+  int mint = 0; // for FIFO scheduling
+  int flag;     // for MLQ scheduling
   c->proc = 0;
   
   for(;;){
@@ -415,7 +415,7 @@ scheduler(void)
       if(p->state != RUNNABLE)
         continue;
 
-      // choi - process scheduling
+      // process scheduling
       switch(SCHED_TYPE) {          
         case SCHED_RR:
           break;
@@ -436,7 +436,7 @@ scheduler(void)
         case SCHED_PRIORITY:
           sched_proc = p;
 
-          //  choose a proc with highest priority
+          // choose a proc with highest priority
           for(p2 = ptable.proc; p2 < &ptable.proc[NPROC]; p2++){
             if(p2->state != RUNNABLE)
               continue;
@@ -505,7 +505,6 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
 
-      // choi
       // Signal frmaework. Register handlers.
       if (p->signal != 0) {
         uint mask = (1 << 31);
@@ -541,7 +540,7 @@ scheduler(void)
 
       p->state = RUNNING;
       //if(ticks%100 == 0) 
-      cprintf("DEBUG: RUNNING %s [%d] %d\n", p->name, p->pid, p->priority);
+      // cprintf("DEBUG: RUNNING %s [%d] %d\n", p->name, p->pid, p->priority);
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -587,7 +586,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
-  myproc()->in_time = ticks;  // choi
+  myproc()->in_time = ticks;
   sched();
   release(&ptable.lock);
 }
@@ -663,7 +662,7 @@ wakeup1(void *chan)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan) {
       p->state = RUNNABLE;
-      p->in_time = ticks; // choi
+      p->in_time = ticks;
     }
 }
 
@@ -691,7 +690,7 @@ kill(int pid)
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING) {
         p->state = RUNNABLE;
-        p->in_time = ticks; // choi
+        p->in_time = ticks;
       }
       release(&ptable.lock);
       return 0;

@@ -3,7 +3,8 @@
 #include "user.h"
 #include "fcntl.h"
 
-// choi
+// process test
+// foo {child process num} {stride}
 int
 main(int argc, char *argv[])
 {

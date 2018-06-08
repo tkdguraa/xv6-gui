@@ -69,6 +69,10 @@ void            kfree(char*);
 void            kinit1(void*, void*);
 void            kinit2(void*, void*);
 
+void            increase_ref_count(uint pa); // copy-on-write fork
+void            decrease_ref_count(uint pa);
+uint            get_ref_count(uint pa);
+
 // kbd.c
 void            kbdintr(void);
 
@@ -190,6 +194,9 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
+
+pde_t*          cowuvm(pde_t *pgdir, uint sz); // copy-on-write fork
+void            page_fault();
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

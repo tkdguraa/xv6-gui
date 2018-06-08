@@ -50,7 +50,7 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  // choi
+  // signal framework
   uint signal;                 // A currently pending signal
   sighandler_t sighandlers[32];// Every entry is a pointer to a
                                // function (accepting no arguments and
@@ -62,7 +62,7 @@ struct proc {
   int mlq_level;               // MLQ queue level
 };
 
-// choi
+// signal framework
 void register_handler(sighandler_t sighandler);
 void sigint();
 void sigkillchild();

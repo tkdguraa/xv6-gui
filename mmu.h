@@ -143,7 +143,7 @@ struct segdesc {
 #define PTE_MBZ         0x180   // Bits must be zero
 #define PTE_COW	       	0x800	  // copy-on-write
 
-// choi - Page fault error codes
+// Page fault error codes
 #define FEC_PR		0x00000001	// Page fault caused by protection violation
 #define FEC_WR		0x00000002	// Page fault caused by a write
 #define FEC_U		  0x00000004	// Page fault occured while in user mode
