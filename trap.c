@@ -46,6 +46,16 @@ trap(struct trapframe *tf)
     return;
   }
 
+  // register page fault handler
+  if(tf->trapno == T_PGFLT){
+    cprintf("COW: page fault occured\n");
+    myproc()->tf = tf;
+    page_fault();
+    if(myproc()->killed)
+      exit();
+    return;
+  }
+
   switch(tf->trapno){
   case T_IRQ0 + IRQ_TIMER:
     if(cpuid() == 0){
@@ -100,7 +110,7 @@ trap(struct trapframe *tf)
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();
 
-  // choi - yield CPU or not
+  // Yield CPU or not
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
   if (SCHED_TYPE != SCHED_FIFO) { // FIFO do not yield CPU
@@ -108,14 +118,13 @@ trap(struct trapframe *tf)
     tf->trapno == T_IRQ0+IRQ_TIMER) {
       if (SCHED_TYPE == SCHED_RR || SCHED_TYPE == SCHED_PRIORITY)
         yield();
-      else { // SCHED_MLQ
-        if (myproc()->tick >= myproc()->mlq_level * 20) {
+      else { // SCHED_MLQ. After mlq_level * 10 clocks yield CPU.
+        if (myproc()->tick >= myproc()->mlq_level * 10) {
           myproc()->tick = 0;
           yield();
         } 
-        else {
+        else
           myproc()->tick++;
-        }
       }
      }
   }

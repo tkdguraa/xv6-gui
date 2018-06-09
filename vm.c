@@ -271,7 +271,11 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       if(pa == 0)
         panic("kfree");
       char *v = P2V(pa);
-      kfree(v);
+
+      if(get_ref_count(pa) == 0)
+        kfree(v);
+      else
+        decrease_ref_count(pa);
       *pte = 0;
     }
   }
@@ -342,6 +346,48 @@ bad:
   return 0;
 }
 
+// copy-on-write fork
+pde_t*
+cowuvm(pde_t *pgdir, uint sz)
+{
+  pde_t *d;
+  pte_t *pte;
+  uint pa, i, flags;
+
+  cprintf("COW: cowuvm\n");
+
+  if((d = setupkvm()) == 0)
+    return 0;
+  for(i = 0; i < sz; i += PGSIZE){
+    if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
+      panic("cowuvm: pte should exist");
+    if(!(*pte & PTE_P))
+      panic("cowuvm: page not present");
+    
+    // Converts each writeable page table entry in the parent to read-only and cow
+    *pte &= ~PTE_W;
+    *pte |= PTE_COW;
+
+    pa = PTE_ADDR(*pte);
+    flags = PTE_FLAGS(*pte);
+
+    if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0)
+      goto bad;
+    // For each page that is shared copy-on-write
+    // we need to increase the refernce count.
+    increase_ref_count(pa);
+  }
+  lcr3(V2P(pgdir)); // Flush TLB for original process
+  return d;
+
+bad:
+  freevm(d);
+  // Even though we failed to copy, we should flush TLB, since
+  // some entries in the original process page table have been changed
+  lcr3(V2P(pgdir));
+  return 0;
+}
+
 //PAGEBREAK!
 // Map user virtual address to kernel address.
 char*
@@ -383,6 +429,87 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+// copy-on-write page fault handler
+void
+page_fault()
+{
+  pte_t *pte;
+  struct proc *proc = myproc();
+  uint pa,          // Faulty page's physical address
+       npa,         // New page's physical address
+       va = rcr2(), // Get the faulty page's virtual address from the CR2 register
+       err = proc->tf->err,
+       flags;
+  char *mem;
+
+  cprintf("COW: handle page fault\n");
+
+  // Obtain the start of the page that the faulty virtual address belongs to
+  char *a = (char*)PGROUNDDOWN((uint)va);
+
+  // Fault is not for user address, kill process
+  if(va >= KERNBASE || (pte = walkpgdir(proc->pgdir, a, 0)) == 0){
+    cprintf("pid %d %s: Page fault--Illegal virtual address on cpu %d addr 0x%x.\n",
+    proc->pid, proc->name, mycpu()->apicid, va);
+    proc->killed = 1;
+    return;
+  }
+
+  // Not a write fault for a user address
+  if(!(err & FEC_WR)) {
+    cprintf("pid %d %s: Page fault--Not a write fault for a user address.\n", proc->pid, proc->name);
+    proc->killed = 1;
+    return;
+  }
+
+  // Check if the fault is for an address whose page table includes the PTE_COW flag
+  // If not, kill the program as usual
+  if(!(*pte & PTE_COW)){
+    cprintf("pid %d %s: Page fault--Not including the PTE_COW flag.\n", proc->pid, proc->name);
+    proc->killed = 1;
+    return;
+  }
+
+  // Get the physical address from the given page table entry
+  pa = PTE_ADDR(*pte);
+  flags = PTE_FLAGS(*pte);
+  // Get reference count for faulty page
+  int ref_count = get_ref_count(pa);
+  cprintf("ref_count: %d \n", ref_count);
+
+  // Page has one or more reference
+  if(ref_count >= 1){
+    // Allocate a new memory page for the process
+    if((mem = kalloc()) == 0) {
+      cprintf("Page fault out of memory, kill proc %s with pid %d\n", proc->name, proc->pid);
+      proc->killed = 1;
+      return;
+    }
+
+    // Copy the contents from the original memory page pointed the virtual address
+    memmove(mem, (char*)P2V(pa), PGSIZE);
+
+    // Physical address for new page
+    npa = V2P(mem);
+    // Point the pte pointer to the newly allocated page
+    *pte = npa | flags | PTE_P | PTE_W;
+
+    // Flush TLB for process since page table entries changed
+    lcr3(V2P(proc->pgdir));
+
+    // Decrement ref count for old page
+    decrease_ref_count(pa);
+    cprintf("Resolve one page fault pid: %d, pname: %s, pa: %d, npa: %d\n", proc->pid, proc->name, pa, npa);
+  }
+  // Page has no more reference
+  else if (get_ref_count(pa) == 0) {
+    *pte |= PTE_W;
+    *pte &= ~PTE_COW;
+    cprintf("Page has no reference  pid: %d, pname: %s, pa: %d\n", proc->pid, proc->name, pa);
+    // Flush TLB for process since page table entries changed
+    lcr3(V2P(proc->pgdir));
+  }
+}
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!

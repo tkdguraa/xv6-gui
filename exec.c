@@ -97,9 +97,10 @@ exec(char *path, char **argv)
   oldpgdir = curproc->pgdir;
   curproc->pgdir = pgdir;
   curproc->sz = sz;
-  curproc->tf->eip = elf.entry;  // main
+  curproc->tf->eip = elf.entry; // main
   curproc->tf->esp = sp;
-  curproc->priority = 3; // choi
+  curproc->priority = 3; // default priority
+  cprintf("EXEC\n");
   switchuvm(curproc);
   freevm(oldpgdir);
   return 0;

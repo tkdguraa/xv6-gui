@@ -143,9 +143,9 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
 
-  // choi
   p->tick = 0;
-  p->priority = 5;     // Default priority
+  p->priority = 5; // Default priority
+  cprintf("Allocproc\n");
 
   release(&ptable.lock);
 
@@ -170,7 +170,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  p->signal = 0;                  // initizlize signal - choi
+  p->signal = 0;                  // initizlize signal
   memset(p->sighandlers, 0, 32);  // initialize signal handlers to 0 (NULL)
 
   return p;
@@ -210,10 +210,10 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-  p->in_time = ticks; // choi
+  p->in_time = ticks;
 
-  // choi - set schedule type
-  SCHED_TYPE = SCHED_MLQ;
+  // set schedule type
+  SCHED_TYPE = SCHED_RR;
 
   release(&ptable.lock);
 }
@@ -255,7 +255,7 @@ fork(void)
   }
 
   // Copy process state from proc.
-  if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+  if((np->pgdir = cowuvm(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
@@ -281,9 +281,9 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  np->in_time = ticks; // choi
+  np->in_time = ticks; // FIFO: time that state is changed into RUNNABLE
 
-  // choi - change sh proc's priority to 3
+  // change sh proc's priority to 3
   if(np->name[0] == 's' && np->name[1] == 'h')
     np->priority = 3;
 
@@ -318,7 +318,6 @@ exit(void)
   end_op();
   curproc->cwd = 0;
 
-  //cprintf("in exit, process name: %s, pid: %d parentpid: %d\n", curproc->name, curproc->pid, curproc->parent->pid);
   // Send SIGCHILDEXIT signal to its parent process
   sigsend(curproc->parent->pid, SIGCHILDEXIT);
   
@@ -386,94 +385,6 @@ wait(void)
   }
 }
 
-// choi
-struct proc*
-sched_default(struct proc* p_prev) // xv6 default scheduler
-{
-  struct proc* p = p_prev++;
-  if (p == 0 || p == &ptable.proc[NPROC-1]) // if p is null or p is the last process
-    p = ptable.proc;
-  for(; p < &ptable.proc[NPROC]; p++){  // from p to the last process
-    if(p->state == RUNNABLE)
-      return p;
-  }
-  for(p = ptable.proc; p <= p_prev; p++){ // from the first process to p_prev
-    if(p->state == RUNNABLE)
-      return p;
-  }
-  return 0;
-}
-
-// choi
-// struct proc*
-// sched_RR(void)
-// {
-//   int mint = ticks;
-//   struct proc* p;
-//   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-//     if(p->state == RUNNABLE && p->reftime < mint)
-//       mint = p->reftime;
-//   }
-//   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-//     if(p->state != RUNNABLE || p->reftime > mint)
-//       continue;
-//     return p;
-//   }
-//   return 0;
-// }
-
-// choi
-struct proc*
-sched_priority(void)
-{
-  int minp = 20; // minimum priority
-  struct proc* p;
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    if (p->state == RUNNABLE && p->priority < minp)
-      minp = p->priority;
-  }
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->state != RUNNABLE || p->priority > minp)
-      continue;
-    return p;
-  }
-  return 0;
-}
-
-// choi
-struct proc*
-sched_MLQ(void)
-{
-  struct proc* p;
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) { // 1Level priority process
-    if (p->state == RUNNABLE && p->priority < 5){
-      p->priority += 1;
-      p->mlq_level = 1;
-      return p;
-    }
-  }
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) { // 2Level priority process
-    if (p->state == RUNNABLE && p->priority < 10) {
-      p->priority += 1;
-      p->mlq_level = 2;
-      return p;
-    }
-  }
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) { // 3Level priority process
-    if (p->state == RUNNABLE && p->priority < 15) {
-      p->priority += 1;
-      p->mlq_level = 3;
-      return p;
-    }
-  }
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) { // 4Level priority process
-    if (p->state == RUNNABLE && p->priority < 21) {
-      p->mlq_level = 4;
-      return p;
-    }
-  }
-  return 0;
-}
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -486,10 +397,10 @@ void
 scheduler(void)
 {
   struct proc *p = ptable.proc;
-  struct proc *p2, *sched_proc;  // choi - for scheduling
+  struct proc *p2, *sched_proc;  // for scheduling
   struct cpu *c = mycpu();
-  int mint = 0; // choi - for FIFO scheduling
-  int flag;     // choi - for MLQ scheduling
+  int mint = 0; // for FIFO scheduling
+  int flag;     // for MLQ scheduling
   c->proc = 0;
   
   for(;;){
@@ -503,7 +414,7 @@ scheduler(void)
       if(p->state != RUNNABLE)
         continue;
 
-      // choi - process scheduling
+      // process scheduling
       switch(SCHED_TYPE) {          
         case SCHED_RR:
           break;
@@ -524,18 +435,26 @@ scheduler(void)
         case SCHED_PRIORITY:
           sched_proc = p;
 
-          //  choose a proc with highest priority
+          // choose a proc with high priority (low proc->priority value)
           for(p2 = ptable.proc; p2 < &ptable.proc[NPROC]; p2++){
             if(p2->state != RUNNABLE)
               continue;
-            if (sched_proc->priority > p2->priority)
+            if (p2->priority < sched_proc->priority)
               sched_proc = p2;
           }
           p = sched_proc;
           break;
 
-        // Level1,2,3 queue is FIFO scheduling
-        // Level4 queue is RR scheduling
+        // Multi-Level Feedback Queue
+        // | priority | mlq level | time quantum (CPU clock) |
+        // | 0-4      | 1         | 10                       |
+        // | 5-9      | 2         | 20                       |
+        // | 10-14    | 3         | 30                       |
+        // | 15-20    | 4         | 40                       |
+        // Go over lower level queue first. Every queue uses RR scheduling,
+        // but time quantum(slice) is not same. A process can be executed during 
+        // mlq_level * 10 CPU clocks. After a execution if the process' work is not over, 
+        // then priority +1 and go back to ready queue.
         case SCHED_MLQ:
           flag = 0;
           for (p2 = ptable.proc; p2 < &ptable.proc[NPROC]; p2++) { // 1Level priority process
@@ -584,22 +503,20 @@ scheduler(void)
           break;
       }
 
-      //if (p->state != RUNNABLE) continue;
-
-
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
       c->proc = p;
       switchuvm(p);
 
-      // choi
-      // Signal frmaework. Register handlers.
+      // Signals frmaework. Register handlers.
+      // proc->signal has 32 bits, every bit means a signal. 
       if (p->signal != 0) {
         uint mask = (1 << 31);
         sighandler_t* handler = &p->sighandlers[31];
 
         while (mask > 4) {
+          // Register handler if it recieved the signal and has corresponding handler.
           if ((p->signal & mask) && (*handler != 0))
             register_handler(*handler);
           
@@ -607,7 +524,7 @@ scheduler(void)
           handler--;    // Move the pointer to the next handler
         }
 
-        // Default handlers (number 0~2) if there is no given handler
+        // Execute default handlers (number 0~2) if there is no given handler
         while (mask > 0) {
           if (p->signal & mask) {
             if (*handler == 0) {
@@ -624,12 +541,12 @@ scheduler(void)
           handler--; 
         }
 
-        p->signal = 0;  // reset signal
+        p->signal = 0;  // Reset signal
       }
 
       p->state = RUNNING;
       //if(ticks%100 == 0) 
-      cprintf("DEBUG: RUNNING %s [%d] %d\n", p->name, p->pid, p->priority);
+      // cprintf("DEBUG: RUNNING %s [%d] %d\n", p->name, p->pid, p->priority);
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -675,7 +592,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   myproc()->state = RUNNABLE;
-  myproc()->in_time = ticks;  // choi
+  myproc()->in_time = ticks;
   sched();
   release(&ptable.lock);
 }
@@ -751,7 +668,7 @@ wakeup1(void *chan)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan) {
       p->state = RUNNABLE;
-      p->in_time = ticks; // choi
+      p->in_time = ticks;
     }
 }
 
@@ -779,7 +696,7 @@ kill(int pid)
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING) {
         p->state = RUNNABLE;
-        p->in_time = ticks; // choi
+        p->in_time = ticks;
       }
       release(&ptable.lock);
       return 0;
@@ -826,9 +743,9 @@ procdump(void)
   }
 }
 
-// Regist the handler
+// Register a signal handler
 void
-register_handler(sighandler_t sighandler)
+register_handler(sighandler_t handler)
 { 
   struct proc *curproc = myproc();
   char* addr = uva2ka(curproc->pgdir, (char*)curproc->tf->esp);
@@ -839,7 +756,7 @@ register_handler(sighandler_t sighandler)
   *(int*)(addr + ((curproc->tf->esp - 4) & 0xFFF)) = curproc->tf->eip;
   curproc->tf->esp -= 4;
   // update eip
-  curproc->tf->eip = (uint)sighandler;
+  curproc->tf->eip = (uint)handler;
 }
 
 void sigint() {

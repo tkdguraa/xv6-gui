@@ -3,7 +3,6 @@
 #include "user.h"
 #include "fcntl.h"
 
-// choi
 int
 main(int argc, char *argv[])
 {
