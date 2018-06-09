@@ -9,4 +9,5 @@ unsigned short* VESA_ADDR;
 
 void vesamodeinit();
 void test();
+
 #endif 

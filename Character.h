@@ -1,5 +1,5 @@
-#ifndef __FONT_H__
-#define __FONT_H__
+#ifndef CHARACTER_H
+#define CHARACTER_H
 
 #define CHAR_WIDTH   8
 #define CHAR_HEIGHT  16

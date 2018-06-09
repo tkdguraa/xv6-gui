@@ -8,25 +8,23 @@
 #include "VBE.h"
 #include "Graphics.h"
 #include "mouse.h"
-#include "spinlock.h"
 static void startothers(void);
 static void mpmain(void)  __attribute__((noreturn));
 extern pde_t *kpgdir;
 extern char end[]; // first address after kernel loaded from ELF file
-
+ushort savemouse[20][20];
 // Bootstrap processor starts running C code here.
 // Allocate a real stack and switch to it, first
 // doing some setup required for memory allocator to work.
 int
 main(void)
 {
-  cprintf("hahagood");
   kinit1(end, P2V(4*1024*1024)); // phys page allocator
   kvmalloc();      // kernel page table
   mpinit();        // collect info about this machine
   lapicinit();
   seginit();       // set up segments
-
+  
   cprintf("\ncpu%d: starting xv6\n\n", cpu->id);
   picinit();       // interrupt controller
   ioapicinit();    // another interrupt controller
@@ -38,10 +36,8 @@ main(void)
   fileinit();      // file table
   iinit();
   ideinit();       // disk
-  
   vesamodeinit();
   test();
- 
   if(!ismp)
     timerinit();   // uniprocessor timer
   startothers();   // start other processors
@@ -51,17 +47,12 @@ main(void)
   
   mpmain();
 }
-struct spinlock *tps;
+
 void test()
 {
-  Draw_Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,RGB(255,255,255),1);
+ // Draw_Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,RGB(255,255,255),1);
   //Windows(50,50,600,400,"hello");
   mouseinit();
-  int iX=514;
-  int iY=300;
-  Draw_Mouse(514,300);
-  uchar temp;
-  int x,y;
 }
 // Other CPUs jump here from entryother.S.
 static void

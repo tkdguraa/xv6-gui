@@ -98,8 +98,9 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
-
-
+extern int sys_loadimg(void);
+extern int sys_createwindow(void);
+// extern int sys_deletewindow(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -123,6 +124,9 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_loadimg] sys_loadimg,
+[SYS_createwindow] sys_createwindow,
+// [SYS_deletewindow] sys_deletewindow,
 };
 
 void

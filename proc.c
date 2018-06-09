@@ -6,6 +6,8 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "bitmap.h"
+#include "windows.h"
 
 struct {
   struct spinlock lock;
@@ -463,3 +465,35 @@ procdump(void)
     cprintf("\n");
   }
 }
+int
+loadimg(PICNODE pic,int width,int height, int x, int y)
+{
+  int i, j;
+	unsigned short color;
+	RGBQUAD rgb;
+	 cprintf("height:%d width:%d",height,width);
+	for (i = 0; i < height; i++)
+	{
+		for (j = 0; j < width; j++)
+		{
+			rgb = pic.data[i*width+j];
+			if (rgb.rgbReserved == 1) continue;
+			color = (unsigned short)RGB(rgb.rgbRed, rgb.rgbGreen, rgb.rgbBlue);
+		//cprintf("R:%d G:%d B:%d\n",rgb.rgbRed,rgb.rgbGreen,rgb.rgbBlue);
+			local_Draw_Point(j+x,height-i-1+y, color);
+		}
+	}
+   local_Write_Char(345,500,RGB(0,0,0),RGB(0,0,0),"TextEdit",8);
+  return 0;
+}
+// int
+// createwindow(wnd window)
+// {
+//     Draw_Rect( window,window.x, window.y, window.x + window.width, window.y + window.height, RGB(100,200,80),0);
+//     Draw_Rect( window,window.x, window.y, window.x + window.width, window.y + window.height, RGB(100,100,100),1);
+//     Draw_Rect( window,window.x, window.y, window.x + window.width - 1, window.y + 21, RGB(0,0,0),1);
+//     Draw_Line( window,window.x + window.width - 20, window.y + 5, window.x + window.width - 6, window.y + 15, RGB(71,199,21));
+//     Draw_Line( window,window.x + window.width - 20, window.y + 15, window.x + window.width - 6, window.y + 5, RGB(71,199,21));
+//     Draw_Line( window,window.x + window.width - 25, window.y, window.x + window.width - 25, window.y + 21, RGB(71,199,21));
+//     Write_Char( window,window.x + 6, window.y + 3,RGB(255,255,255),RGB(255,255,255),window.Title,sizeof(window.Title));
+// }

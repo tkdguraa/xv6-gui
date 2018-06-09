@@ -1,8 +1,13 @@
 #include "Graphics.h"
 #include "VBE.h"
-#include "Character.h"
+#include "character.h"
 #include "mouse.h"
+#include "windows.h"
 #include "user.h"
+#include "bitmap.h"
+ushort savemouse[20][20];
+int ct1=0;
+int ct2=0;
 static uchar MouseBuf[MOUSE_WIDTH * MOUSE_HEIGHT ] =
 {
     1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -41,11 +46,15 @@ void Draw_Mouse(int iX,int iY)
                 break;
 
                 case 1:
-                Draw_Point(iX+j,iY+i,RGB(255,255,255));
+                {
+                local_Draw_Point(iX+j,iY+i,RGB(255,255,255));
+                }
                 break;
 
                 case 2:
-                Draw_Point(iX+j,iY+i,RGB(0,0,0));
+                {
+                local_Draw_Point(iX+j,iY+i,RGB(0,0,0));
+                }
                 break;
             }
             loadMouse++;
@@ -53,16 +62,41 @@ void Draw_Mouse(int iX,int iY)
     }
 }
 
- void Draw_Point( int iX, int iY, COLOR stColor )
+ void Draw_Point( wnd window, int iX, int iY, COLOR stColor )
+{
+    //*(((COLOR*)VESA_ADDR) + SCREEN_WIDTH * iY + iX ) = stColor;
+    window.wndBuffer[window.width*iY+iX]=stColor;
+} 
+void local_Draw_Point(int iX, int iY, COLOR stColor )
 {
     *(((COLOR*)VESA_ADDR) + SCREEN_WIDTH * iY + iX ) = stColor;
-}
+} 
+ void save_mouse( int iX, int iY )
+ {
+     int i,j;
+     for(i=0;i<20;i++)
+        for(j=0;j<20;j++)
+        {
+            savemouse[i][j]=*(((COLOR*)VESA_ADDR) + SCREEN_WIDTH * (iY+i) + iX+j);
+        }
+ }
 int RGB(int r,int g,int b)
 {
 	return ((b / 8)+((g / 4)<<5)+((r / 8)<<11));
 }
+void repaint( int iX, int iY)
+{
+   int i,j;
+    for(i=0;i<20;i++)
+        for(j=0;j<20;j++)
+        {
+           *(((COLOR*)VESA_ADDR) + SCREEN_WIDTH * (iY+i) + iX+j ) = savemouse[i][j];
+        }
+    
+}
 
-void Draw_Line( int iX1, int iY1, int iX2, int iY2, COLOR stColor )
+
+void Draw_Line( wnd window,int iX1, int iY1, int iX2, int iY2, COLOR stColor )
 {
     int iDeltaX, iDeltaY;
     int iError = 0;
@@ -97,7 +131,7 @@ void Draw_Line( int iX1, int iY1, int iX2, int iY2, COLOR stColor )
         iY = iY1;
         for( iX = iX1 ; iX != iX2 ; iX += iStepX )
         {
-            Draw_Point( iX, iY, stColor );
+            Draw_Point( window, iX, iY, stColor );
             iError += iDeltaError;
 
             if( iError >= iDeltaX )
@@ -106,7 +140,7 @@ void Draw_Line( int iX1, int iY1, int iX2, int iY2, COLOR stColor )
                 iError -= iDeltaX << 1;
             }
         }
-        Draw_Point( iX, iY, stColor );
+        Draw_Point( window, iX, iY, stColor );
     }
     else
     {
@@ -114,7 +148,7 @@ void Draw_Line( int iX1, int iY1, int iX2, int iY2, COLOR stColor )
         iX = iX1;
         for( iY = iY1 ; iY != iY2 ; iY += iStepY )
         {
-            Draw_Point( iX, iY, stColor );
+            Draw_Point( window, iX, iY, stColor );
             iError += iDeltaError;
             if( iError >= iDeltaY )
             {
@@ -122,34 +156,63 @@ void Draw_Line( int iX1, int iY1, int iX2, int iY2, COLOR stColor )
                 iError -= iDeltaY << 1;
             }
         }
-        Draw_Point( iX, iY, stColor );
+        Draw_Point( window, iX, iY, stColor );
     }
 }
-void Draw_Rect( int iX1, int iY1, int iX2, int iY2, COLOR stColor, int Fill )
+void Draw_Rect(wnd window,int iX1, int iY1, int iX2, int iY2, COLOR stColor, int Fill )
 {
     int width;
     int iTemp;
     int iY;
     int iStepY;
-        Draw_Line( iX1, iY1, iX2, iY1, stColor );
-        Draw_Line( iX1, iY1, iX1, iY2, stColor );
-        Draw_Line( iX2, iY1, iX2, iY2, stColor );
-        Draw_Line( iX1, iY2, iX2, iY2, stColor );
+    int i;
+        Draw_Line( window, iX1, iY1, iX2, iY1, stColor );
+        Draw_Line( window, iX1, iY1, iX1, iY2, stColor );
+        Draw_Line( window, iX2, iY1, iX2, iY2, stColor );
+        Draw_Line( window, iX1, iY2, iX2, iY2, stColor );
     if(Fill==1)
     {
         if(iY1>iY2)
         {
-            for(int i=0; i<iY1-iY2; i++)
-            Draw_Line( iX1, iY2+i, iX2,iY2+i,stColor);
+            for(i=0; i<iY1-iY2; i++)
+            Draw_Line( window, iX1, iY2+i, iX2,iY2+i,stColor);
         }
         else
         {
-            for(int i=0; i<iY2-iY1; i++)
-            Draw_Line( iX1, iY1+i, iX2,iY1+i,stColor);
+            for( i=0; i<iY2-iY1; i++)
+            Draw_Line( window, iX1, iY1+i, iX2,iY1+i,stColor);
         }
     }
 }
-void Write_Char( int iX, int iY, COLOR CharColor, COLOR BackColor, const char* inputString, int length )
+
+void Write_Char( wnd window, int iX, int iY, COLOR CharColor, COLOR BackColor, const char* inputString, int length )
+{
+    int x,y,i,j,k;
+    unsigned char word;
+    int start;
+   
+    x=iX;
+  
+    for( k = 0 ; k < length ; k++)
+    {
+        y = iY*window.width;
+        start = inputString[k] * CHAR_HEIGHT;
+        for( j = 0; j < CHAR_HEIGHT; j++)
+        {
+            word = Characters[start++];
+            for( i = 0; i < CHAR_WIDTH; i++)
+            {
+                if(word&(0x01<<(CHAR_WIDTH-i-1)))
+                {
+                    window.wndBuffer[x+y+i]=BackColor;
+                }
+            }
+            y=y+window.width;
+        }
+        x=x+CHAR_WIDTH; 
+    }
+}
+void local_Write_Char( int iX, int iY, COLOR CharColor, COLOR BackColor, const char* inputString, int length )
 {
     int x,y,i,j,k;
     unsigned char word;
@@ -176,13 +239,15 @@ void Write_Char( int iX, int iY, COLOR CharColor, COLOR BackColor, const char* i
         x=x+CHAR_WIDTH; 
     }
 }
-void Windows( int iX, int iY, int width, int height,const char* title)
-{
-    Draw_Rect( iX, iY, iX + width, iY + height, RGB(100,200,80),0);
-    Draw_Rect( iX, iY, iX + width, iY + height, RGB(100,100,100),1);
-    Draw_Rect( iX, iY, iX + width - 1, iY + 21, RGB(0,0,0),1);
-    Draw_Line( iX + width - 20, iY + 5, iX + width - 6, iY + 15, RGB(71,199,21));
-    Draw_Line( iX + width - 20, iY + 15, iX + width - 6, iY + 5, RGB(71,199,21));
-    Draw_Line( iX + width - 25, iY, iX + width - 25, iY + 21, RGB(71,199,21));
-    Write_Char( iX + 6, iY + 3,RGB(255,255,255),RGB(255,255,255),title,6);
-}
+// void Windows( int iX, int iY, int width, int height,const char* title)
+// {
+//     Draw_Rect( iX, iY, iX + width, iY + height, RGB(100,200,80),0);
+//     Draw_Rect( iX, iY, iX + width, iY + height, RGB(100,100,100),1);
+//     Draw_Rect( iX, iY, iX + width - 1, iY + 21, RGB(0,0,0),1);
+//     Draw_Line( iX + width - 20, iY + 5, iX + width - 6, iY + 15, RGB(71,199,21));
+//     Draw_Line( iX + width - 20, iY + 15, iX + width - 6, iY + 5, RGB(71,199,21));
+//     Draw_Line( iX + width - 25, iY, iX + width - 25, iY + 21, RGB(71,199,21));
+//     Write_Char( iX + 6, iY + 3,RGB(255,255,255),RGB(255,255,255),title,6);
+// }
+
+

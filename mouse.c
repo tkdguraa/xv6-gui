@@ -5,9 +5,10 @@
 #include "x86.h"
 #include "traps.h"
 #include "VBE.h"
+#include "Graphics.h"
 static mouseM mouseSt={0,};
 static queue mousequeue;
-static mouseDT mousebuf[101];
+static mouseDT mousebuf[10000];
 
 BOOL JudoutbFull()
 {
@@ -18,7 +19,7 @@ BOOL JudoutbFull()
     else
     return 0;
 }
-uchar scan()
+BOOL scan()
 {
     while(JudoutbFull()==0)
     {
@@ -54,20 +55,23 @@ BOOL waitAFK()
     putmouseintoqueue(data);
     return res;
 }
+
 void mouseinit()
 {
+    int i;
     uchar data;
-     for(int i=0;i<0xffff;i++)
+     initqueue(&mousequeue,mousebuf,10000,sizeof(mouseDT));
+     for( i=0;i<0xffff;i++)
      if(JudinbFull()==0)
         break;
     outb( 0x64 , 0xa8 );
-    outb( 0x64 , 0xd4 );
-    for(int i=0;i<0xffff;i++)
+
+    for( i=0;i<0xffff;i++)
      if(JudinbFull()==0)
         break;
     outb( 0x64 , 0x20 );
 
-    for(int i=0;i<0xffff;i++)
+    for( i=0;i<0xffff;i++)
      if(JudoutbFull()==1)
         break;
 
@@ -75,13 +79,13 @@ void mouseinit()
     data|=0x02;
     outb( 0x64 , 0x60 );
 
-    for(int i=0;i<0xffff;i++)
+    for( i=0;i<0xffff;i++)
      if(JudinbFull()==0)
         break;
     outb(0x60,data);
- 
+    outb( 0x64 , 0xd4 );
 
-    for(int i=0;i<0xffff;i++)
+    for( i=0;i<0xffff;i++)
      if(JudinbFull()==0)
         break;
 
@@ -89,9 +93,11 @@ void mouseinit()
     initlock(&mouseSt.SpinLock,"mouse");
     picenable(IRQ_MOUSE);
     ioapicenable(IRQ_MOUSE, 0);
-    initqueue(&mousequeue,mousebuf,101,sizeof(mouseDT));
+    cprintf("Set mouse successfully");
 }
-int iX=514;
+
+
+int iX=400;
 int iY=300;
 BOOL JudmouseData()//whether there is mouse data in output buffer.
 {
@@ -101,30 +107,50 @@ BOOL JudmouseData()//whether there is mouse data in output buffer.
     }
     return 0;
 }
+int tt=0;
+uchar temp;
 void movemouse()
 {
-  uchar temp;
   int x,y;
-  //while(1)
-  {
+
     if(getmousefromqueue(&temp,&x,&y)==1)
     {
-    Draw_Rect(iX,iY,iX+MOUSE_WIDTH,iY+MOUSE_HEIGHT,RGB(255,255,255),1);
+    if(x>0)
+    x=1;
+    if(x<0)
+    x=-1;
+    if(y>0)
+    y=1;
+    if(y<0)
+    y=-1;
+  
+    if(iX+x==0||iX+x==SCREEN_WIDTH-MOUSE_WIDTH)
+    x=0;
+    if(iY+y==0||iY+y==SCREEN_HEIGHT-MOUSE_HEIGHT)
+    y=0;
     iX=iX+x;
     iY=iY+y;
-    if(iX<0)
-    iX=0;
-    else if(iX>SCREEN_WIDTH)
-    iX=SCREEN_WIDTH;
-    if(iY<0)
-    iY=0;
-    else if(iY>SCREEN_HEIGHT)
-    iY=SCREEN_HEIGHT;
-    Draw_Mouse(iX,iY);
-   
+    //cprintf("%d %d %d %d\n",x,y,iX,iY);
+    //cprintf("%d\n",tt);
+    if(temp&MOUSE_LBUTTON)
+    {
+        cprintf("asd");
     }
-  }
-
+     if(temp&MOUSE_RBUTTON)
+    {
+        cprintf("asd");
+    }
+    if(tt==0)
+    {
+        tt++;
+    }
+    else
+    {
+        repaint(iX-x,iY-y);
+    }
+    save_mouse(iX,iY);
+    Draw_Mouse(iX,iY);
+    }
 }
 void mouseintr()
 {
@@ -135,6 +161,7 @@ void mouseintr()
      {
         temp=scan();
         putmouseintoqueue(temp);
+        movemouse();
      }
     }
 }
@@ -142,17 +169,18 @@ BOOL putmouseintoqueue(uchar mousedata)
 {
     uchar res;
    // cprintf("put mouse into queue\n");
-
     switch(mouseSt.byct)
     {
         case 0:
         mouseSt.CurData.flag=mousedata;
         mouseSt.byct++;
         break;
+
         case 1:
         mouseSt.CurData.x=mousedata;
         mouseSt.byct++;
         break;
+
         case 2:
         mouseSt.CurData.y=mousedata;
         mouseSt.byct++;
@@ -165,36 +193,53 @@ BOOL putmouseintoqueue(uchar mousedata)
     if(mouseSt.byct>=3)
     {
         acquire(&(mouseSt.SpinLock));
+        mouseSt.byct=0;
         res=PutQueue(&mousequeue,&mouseSt.CurData);
         release(&(mouseSt.SpinLock));
-        mouseSt.byct=0;
     }
     return res;
 }
+
 BOOL getmousefromqueue(uchar* status,int* x,int* y)
 {
    // cprintf("getmouse from queue\n");
+
     mouseDT data;
     uchar res;
-     if(JudQueEmpty(&mousequeue)==1)
+    uchar* tp;
+    if(JudQueEmpty(&mousequeue)==1)
     {
         return 0;
     }
+   
     acquire(&mouseSt.SpinLock);
     res=GetQueue(&mousequeue,&data);
     release(&mouseSt.SpinLock);
+   
     if(res==0)
     {
         return 0;
     }
 
-    *status=data.flag &0x7;
+      *status=data.flag &0x7;
+
+    if ( (data.flag >> 7) & 0x1 || (data.flag >> 6) & 0x1) 
+    {
+        return -1;
+    }
+
+
     *x=data.x&0xff;
     if(data.flag&0x10)
+    {
     *x|=0xffffff00;
+    }
     *y=data.y&0xff;
     if(data.flag&0x20)
+    {
     *y|=0xffffff00;
+    }
     *y=-*y;
+
     return 1;
 }

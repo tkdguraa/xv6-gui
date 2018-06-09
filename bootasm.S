@@ -13,17 +13,17 @@
 start:
   cli                         # BIOS enabled interrupts; disable
   
-setupsvga:
-  movb    $0x4f,%ah
-  movb    $0x01,%al
-  movw    $0x4117,%cx
-  movw    $0x1000,%di
+  movw    $0x1000, %di            
+  movw    $0x4f01, %ax            
+  movw    $0x4117, %cx           
   int     $0x10
 
-  movb    $0x4f,%ah
-  movb    $0x02,%al
-  movw    $0x4117,%bx
-  int     $0x10
+  # Set VESA mode
+  movw    $0x4f02, %ax            
+  movw    $0x4117, %bx            
+  int     $0x10     
+ 
+
 
   # Zero data segment registers DS, ES, and SS.
   xorw    %ax,%ax             # Set %ax to zero

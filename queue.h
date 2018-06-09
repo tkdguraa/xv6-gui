@@ -9,12 +9,12 @@ typedef struct queue
     void* Array;
     int putindex;
     int getindex;
-    int jud;
+    BOOL jud;
 }queue;
 void initqueue( queue* que, void* buf, int max, int size);
-int JudQueFull(const queue* que);
-int JudQueEmpty(const queue* que);
-int PutQueue(queue* que,const void* data);
-int GetQueue(queue* que,void* data);
+BOOL JudQueFull(const queue* que);
+BOOL JudQueEmpty(const queue* que);
+BOOL PutQueue(queue* que,const void* data);
+BOOL GetQueue(queue* que,void* data);
 void* memcpy(void *dst, const void *src, uint n);
 #endif
