@@ -48,7 +48,7 @@ trap(struct trapframe *tf)
 
   // register page fault handler
   if(tf->trapno == T_PGFLT){
-    cprintf("COW: in trap.c\n");
+    cprintf("COW: page fault occured\n");
     myproc()->tf = tf;
     page_fault();
     if(myproc()->killed)

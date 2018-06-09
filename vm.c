@@ -272,7 +272,7 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
         panic("kfree");
       char *v = P2V(pa);
 
-      if(get_ref_count(pa) == 1)
+      if(get_ref_count(pa) == 0)
         kfree(v);
       else
         decrease_ref_count(pa);
@@ -353,9 +353,8 @@ cowuvm(pde_t *pgdir, uint sz)
   pde_t *d;
   pte_t *pte;
   uint pa, i, flags;
-  char *mem;
 
-  cprintf("COW: in cowuvm\n");
+  cprintf("COW: cowuvm\n");
 
   if((d = setupkvm()) == 0)
     return 0;
@@ -371,10 +370,8 @@ cowuvm(pde_t *pgdir, uint sz)
 
     pa = PTE_ADDR(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto bad;
-    memmove(mem, (char*)P2V(pa), PGSIZE);
-    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0)
+
+    if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0)
       goto bad;
     // For each page that is shared copy-on-write
     // we need to increase the refernce count.
@@ -445,7 +442,7 @@ page_fault()
        flags;
   char *mem;
 
-  cprintf("COW: in page fault handler\n");
+  cprintf("COW: handle page fault\n");
 
   // Obtain the start of the page that the faulty virtual address belongs to
   char *a = (char*)PGROUNDDOWN((uint)va);
