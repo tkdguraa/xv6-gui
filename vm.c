@@ -475,7 +475,7 @@ page_fault()
   flags = PTE_FLAGS(*pte);
   // Get reference count for faulty page
   int ref_count = get_ref_count(pa);
-  cprintf("ref_count: %d\n", ref_count);
+  cprintf("ref_count: %d \n", ref_count);
 
   // Page has one or more reference
   if(ref_count >= 1){
@@ -499,13 +499,13 @@ page_fault()
 
     // Decrement ref count for old page
     decrease_ref_count(pa);
-    cprintf("Complete one page fault pid: %d, pname: %s\n", proc->pid, proc->name);
+    cprintf("Resolve one page fault pid: %d, pname: %s, pa: %d, npa: %d\n", proc->pid, proc->name, pa, npa);
   }
   // Page has no more reference
   else if (get_ref_count(pa) == 0) {
     *pte |= PTE_W;
     *pte &= ~PTE_COW;
-    cprintf("Page has no reference  pid: %d, pname: %s\n", proc->pid, proc->name);
+    cprintf("Page has no reference  pid: %d, pname: %s, pa: %d\n", proc->pid, proc->name, pa);
     // Flush TLB for process since page table entries changed
     lcr3(V2P(proc->pgdir));
   }
