@@ -50,11 +50,11 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  // signal framework
+  // signals framework
   uint signal;                 // A currently pending signal
-  sighandler_t sighandlers[32];// Every entry is a pointer to a
-                               // function (accepting no arguments and
-                               // returning no value)
+  sighandler_t sighandlers[32];  // Every entry is a pointer to a function
+                               // (accepting no arguments and returning no value)
+  // scheduling
   int priority;                // Process Priority(0-20). Lower value, higher priority
   uint in_time;                // Time that the process entered the ready queue (RUNNABLE state)
   int tick;                    // Count the process used how many CPU time (interrupt timer time)
@@ -62,14 +62,15 @@ struct proc {
   int mlq_level;               // MLQ queue level
 };
 
-// signal framework
-void register_handler(sighandler_t sighandler);
+// signals framework
+void register_handler(sighandler_t handler);
 void sigint();
 void sigkillchild();
 void sigchildexit();
 
 void* memcpy(void *dst, const void *src, uint n);
 
+// scheduling
 #define SCHED_RR        1
 #define SCHED_FIFO      2
 #define SCHED_PRIORITY  3

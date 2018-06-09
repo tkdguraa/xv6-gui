@@ -281,7 +281,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  np->in_time = ticks; // time that state is changed into RUNNABLE
+  np->in_time = ticks; // FIFO: time that state is changed into RUNNABLE
 
   // change sh proc's priority to 3
   if(np->name[0] == 's' && np->name[1] == 'h')
@@ -318,7 +318,6 @@ exit(void)
   end_op();
   curproc->cwd = 0;
 
-  //cprintf("in exit, process name: %s, pid: %d parentpid: %d\n", curproc->name, curproc->pid, curproc->parent->pid);
   // Send SIGCHILDEXIT signal to its parent process
   sigsend(curproc->parent->pid, SIGCHILDEXIT);
   
@@ -436,18 +435,26 @@ scheduler(void)
         case SCHED_PRIORITY:
           sched_proc = p;
 
-          // choose a proc with highest priority
+          // choose a proc with high priority (low proc->priority value)
           for(p2 = ptable.proc; p2 < &ptable.proc[NPROC]; p2++){
             if(p2->state != RUNNABLE)
               continue;
-            if (sched_proc->priority > p2->priority)
+            if (p2->priority < sched_proc->priority)
               sched_proc = p2;
           }
           p = sched_proc;
           break;
 
-        // Level1,2,3 queue is FIFO scheduling
-        // Level4 queue is RR scheduling
+        // Multi-Level Feedback Queue
+        // | priority | mlq level | time quantum (CPU clock) |
+        // | 0-4      | 1         | 10                       |
+        // | 5-9      | 2         | 20                       |
+        // | 10-14    | 3         | 30                       |
+        // | 15-20    | 4         | 40                       |
+        // Go over lower level queue first. Every queue uses RR scheduling,
+        // but time quantum(slice) is not same. A process can be executed during 
+        // mlq_level * 10 CPU clocks. After a execution if the process' work is not over, 
+        // then priority +1 and go back to ready queue.
         case SCHED_MLQ:
           flag = 0;
           for (p2 = ptable.proc; p2 < &ptable.proc[NPROC]; p2++) { // 1Level priority process
@@ -496,21 +503,20 @@ scheduler(void)
           break;
       }
 
-      //if (p->state != RUNNABLE) continue;
-
-
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
       c->proc = p;
       switchuvm(p);
 
-      // Signal frmaework. Register handlers.
+      // Signals frmaework. Register handlers.
+      // proc->signal has 32 bits, every bit means a signal. 
       if (p->signal != 0) {
         uint mask = (1 << 31);
         sighandler_t* handler = &p->sighandlers[31];
 
         while (mask > 4) {
+          // Register handler if it recieved the signal and has corresponding handler.
           if ((p->signal & mask) && (*handler != 0))
             register_handler(*handler);
           
@@ -518,7 +524,7 @@ scheduler(void)
           handler--;    // Move the pointer to the next handler
         }
 
-        // Default handlers (number 0~2) if there is no given handler
+        // Execute default handlers (number 0~2) if there is no given handler
         while (mask > 0) {
           if (p->signal & mask) {
             if (*handler == 0) {
@@ -535,7 +541,7 @@ scheduler(void)
           handler--; 
         }
 
-        p->signal = 0;  // reset signal
+        p->signal = 0;  // Reset signal
       }
 
       p->state = RUNNING;
@@ -737,9 +743,9 @@ procdump(void)
   }
 }
 
-// Regist the handler
+// Register a signal handler
 void
-register_handler(sighandler_t sighandler)
+register_handler(sighandler_t handler)
 { 
   struct proc *curproc = myproc();
   char* addr = uva2ka(curproc->pgdir, (char*)curproc->tf->esp);
@@ -750,7 +756,7 @@ register_handler(sighandler_t sighandler)
   *(int*)(addr + ((curproc->tf->esp - 4) & 0xFFF)) = curproc->tf->eip;
   curproc->tf->esp -= 4;
   // update eip
-  curproc->tf->eip = (uint)sighandler;
+  curproc->tf->eip = (uint)handler;
 }
 
 void sigint() {

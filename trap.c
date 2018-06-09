@@ -118,14 +118,13 @@ trap(struct trapframe *tf)
     tf->trapno == T_IRQ0+IRQ_TIMER) {
       if (SCHED_TYPE == SCHED_RR || SCHED_TYPE == SCHED_PRIORITY)
         yield();
-      else { // SCHED_MLQ
-        if (myproc()->tick >= myproc()->mlq_level * 20) {
+      else { // SCHED_MLQ. After mlq_level * 10 clocks yield CPU.
+        if (myproc()->tick >= myproc()->mlq_level * 10) {
           myproc()->tick = 0;
           yield();
         } 
-        else {
+        else
           myproc()->tick++;
-        }
       }
      }
   }
