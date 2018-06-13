@@ -32,6 +32,7 @@ main(void)
       printf(1, "init: exec desk failed\n");
       exit();
     }
+    else printf(1, "child pid %d\n", pid);
     while((wpid=wait()) >= 0 && wpid != pid)
       printf(1, "zombie!\n");
   }

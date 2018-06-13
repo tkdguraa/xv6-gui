@@ -8,6 +8,12 @@
 #include "proc.h"
 #include "bitmap.h"
 #include "windows.h"
+wnd EditorWnd;
+wnd pbWnd;
+int cnt=0;
+PICNODE bgpic;
+PICNODE textedit;
+PICNODE paintboard;
 
 int
 sys_fork(void)
@@ -90,6 +96,7 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+int iconcnt=0;
 int
 sys_loadimg(void)
 {
@@ -105,12 +112,13 @@ sys_loadimg(void)
     return -1;
   if(argint(4, &y) < 0)
     return -1;
+
   return loadimg(pic,height,width,x,y);
 }
 int sys_createwindow(void)
 {
   wnd window;
-  cprintf("\n hello\n");
+  
   if(argptr(0,(void*)&window,sizeof(wnd)))
   return -1;
   int x,y,height,width;
@@ -130,29 +138,65 @@ int sys_createwindow(void)
  if(argstr(5,&Title)<0)
   return;
   window.Title=Title;
-  cprintf("\n width:%s \n",Title);
 
-  int iX=0;
-  int iY=0;
-  Draw_Rect(window, iX, iY, iX + width, iY + height, RGB(100,200,80),0);
-  Draw_Rect(window, iX, iY, iX + width, iY + height, RGB(100,100,100),1);
-  Draw_Rect(window, iX, iY, iX + width - 1, iY + 21, RGB(0,0,0),1);
-  Draw_Line(window, iX + width - 20, iY + 5, iX + width - 6, iY + 15, RGB(71,199,21));
-  Draw_Line(window, iX + width - 20, iY + 15, iX + width - 6, iY + 5, RGB(71,199,21));
-  Draw_Line(window, iX + width - 25, iY, iX + width - 25, iY + 21, RGB(71,199,21));
-  Write_Char(window, iX + 6, iY + 3,RGB(255,255,255),RGB(255,255,255),Title,8);
- cprintf("height:%d",height);
- cprintf("width:%d",width);
-  int i,j;
-  for( i=0;i<height;i++)
-  for( j=0;j<width;j++)
+  if(cnt==0)
   {
-    local_Draw_Point(x+j,y+i,window.wndBuffer[i*width+j]);
+  EditorWnd=window;
+  cprintf("%s\n",window.Title);
   }
-  return 1;
+  if(cnt==1)
+  {
+  pbWnd=window;
+  cprintf("%s",window.Title);
+  }
+  cnt++;
 }
+
+  
 // int sys_deletewindow(void)
 // {
 
 // }
 
+
+int
+sys_signal(void)
+{
+  int signum;
+  int handler = 0;
+
+  if (argint(0, &signum) < 0 || argint(1, &handler) < 0)
+    return -1;
+
+  return signal(signum, (sighandler_t)handler);
+}
+
+int
+sys_sigsend(void) 
+{
+  int pid;
+  int signum;
+
+  if(argint(0, &pid) < 0 || argint(1, &signum) < 0)
+    return -1;
+
+  return sigsend(pid, signum);
+}
+
+int
+sys_cps(void)
+{
+  return cps();
+}
+
+int
+sys_chpr(void)
+{
+  int pid, pr;
+  if(argint(0, &pid) < 0)
+    return -1;
+  if(argint(1, &pr) < 0)
+    return -1;
+
+  return chpr(pid, pr);
+}

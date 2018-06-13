@@ -24,6 +24,10 @@ void draw_picture(PICNODE pic, int x, int y);
 void save_point( int iX,int iY);
 void save_mouse( int iX, int iY );
 void repaint(int iX, int iY);
+void updatewnd(wnd Window,int JudActivated);
+void mouseclick(int iX,int iY);
+void reset();
+void startpaint(int x,int y);
 //void FillRect(void ) 
 
 #endif 

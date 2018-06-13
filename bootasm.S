@@ -12,7 +12,7 @@
 .globl start
 start:
   cli                         # BIOS enabled interrupts; disable
-  
+
   movw    $0x1000, %di            
   movw    $0x4f01, %ax            
   movw    $0x4117, %cx           
@@ -21,9 +21,7 @@ start:
   # Set VESA mode
   movw    $0x4f02, %ax            
   movw    $0x4117, %bx            
-  int     $0x10     
- 
-
+  int     $0x10    
 
   # Zero data segment registers DS, ES, and SS.
   xorw    %ax,%ax             # Set %ax to zero

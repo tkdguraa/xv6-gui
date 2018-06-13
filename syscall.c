@@ -101,6 +101,11 @@ extern int sys_uptime(void);
 extern int sys_loadimg(void);
 extern int sys_createwindow(void);
 // extern int sys_deletewindow(void);
+extern int sys_signal(void);
+extern int sys_sigsend(void);
+extern int sys_cps(void);
+extern int sys_chpr(void);
+
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -127,6 +132,10 @@ static int (*syscalls[])(void) = {
 [SYS_loadimg] sys_loadimg,
 [SYS_createwindow] sys_createwindow,
 // [SYS_deletewindow] sys_deletewindow,
+[SYS_signal]  sys_signal,
+[SYS_sigsend] sys_sigsend,
+[SYS_cps]     sys_cps,
+[SYS_chpr]    sys_chpr
 };
 
 void
@@ -135,6 +144,7 @@ syscall(void)
   int num;
 
   num = proc->tf->eax;
+  proc->priority = 3; // system call default pirority
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     proc->tf->eax = syscalls[num]();
   } else {

@@ -9,7 +9,8 @@
 static mouseM mouseSt={0,};
 static queue mousequeue;
 static mouseDT mousebuf[10000];
-
+extern wnd EditorWnd;
+extern wnd pbWnd;
 BOOL JudoutbFull()
 {
     if(inb(0x64)&0x01)
@@ -96,9 +97,9 @@ void mouseinit()
     cprintf("Set mouse successfully");
 }
 
-
-int iX=400;
-int iY=300;
+//1024 768
+int iX=512;
+int iY=384;
 BOOL JudmouseData()//whether there is mouse data in output buffer.
 {
     if(inb(0x64)&0x20)
@@ -109,10 +110,10 @@ BOOL JudmouseData()//whether there is mouse data in output buffer.
 }
 int tt=0;
 uchar temp;
+
 void movemouse()
 {
   int x,y;
-
     if(getmousefromqueue(&temp,&x,&y)==1)
     {
     if(x>0)
@@ -130,15 +131,10 @@ void movemouse()
     y=0;
     iX=iX+x;
     iY=iY+y;
-    //cprintf("%d %d %d %d\n",x,y,iX,iY);
-    //cprintf("%d\n",tt);
+
     if(temp&MOUSE_LBUTTON)
     {
-        cprintf("asd");
-    }
-     if(temp&MOUSE_RBUTTON)
-    {
-        cprintf("asd");
+        mouseclick(iX,iY);
     }
     if(tt==0)
     {
@@ -151,6 +147,7 @@ void movemouse()
     save_mouse(iX,iY);
     Draw_Mouse(iX,iY);
     }
+
 }
 void mouseintr()
 {
@@ -227,7 +224,6 @@ BOOL getmousefromqueue(uchar* status,int* x,int* y)
     {
         return -1;
     }
-
 
     *x=data.x&0xff;
     if(data.flag&0x10)

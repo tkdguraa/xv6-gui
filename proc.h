@@ -66,7 +66,33 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // signals framework
+  uint signal;                 // A currently pending signal
+  sighandler_t sighandlers[32];  // Every entry is a pointer to a function
+                               // (accepting no arguments and returning no value)
+  // scheduling
+  int priority;                // Process Priority(0-20). Lower value, higher priority
+  uint in_time;                // Time that the process entered the ready queue (RUNNABLE state)
+  int tick;                    // Count the process used how many CPU time (interrupt timer time)
+                               // For the purpose of FIFO and MLQ scheduling 
+  int mlq_level;               // MLQ queue level
 };
+
+// signals framework
+void register_handler(sighandler_t handler);
+void sigint();
+void sigkillchild();
+void sigchildexit();
+
+void* memcpy(void *dst, const void *src, uint n);
+
+// scheduling
+#define SCHED_RR        1
+#define SCHED_FIFO      2
+#define SCHED_PRIORITY  3
+#define SCHED_MLQ       4
+int SCHED_TYPE;
 
 // Process memory is laid out contiguously, low addresses first:
 //   text

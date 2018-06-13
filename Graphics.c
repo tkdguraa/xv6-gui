@@ -3,8 +3,9 @@
 #include "character.h"
 #include "mouse.h"
 #include "windows.h"
-#include "user.h"
+#include "defs.h"
 #include "bitmap.h"
+extern ushort* BACKGROUND;
 ushort savemouse[20][20];
 int ct1=0;
 int ct2=0;
@@ -239,6 +240,36 @@ void local_Write_Char( int iX, int iY, COLOR CharColor, COLOR BackColor, const c
         x=x+CHAR_WIDTH; 
     }
 }
+
+void updateWnd(wnd window,int JudActivated)
+{
+  int iX=0;
+  int iY=0;
+  int width,height;
+  int x,y;
+  width=window.width;
+  height=window.height;
+  x=window.x;
+  y=window.y;
+
+  if(JudActivated==0)
+  {
+  Draw_Rect(window, iX, iY, iX + width, iY + height, RGB(255,255,255),1);
+  Draw_Rect(window, iX, iY, iX + width, iY + height, RGB(60,60,60),0);
+  Draw_Rect(window, iX, iY, iX + width - 1, iY + 21, RGB(60,60,60),1);
+  Draw_Line(window, iX + width - 20, iY + 5, iX + width - 6, iY + 15, RGB(255,255,255));
+  Draw_Line(window, iX + width - 20, iY + 15, iX + width - 6, iY + 5, RGB(255,255,255));
+  Draw_Line(window, iX + width - 25, iY, iX + width - 25, iY + 21, RGB(255,255,255));
+  Write_Char(window, iX + 6, iY + 3,RGB(255,255,255),RGB(255,255,255),window.Title,strlen(window.Title));
+  }
+  int i,j;
+  for( i=0;i<=height;i++)
+  for( j=0;j<=width;j++)
+  {
+    local_Draw_Point(x+j,y+i,window.wndBuffer[i*width+j]);
+  }
+}
+
 // void Windows( int iX, int iY, int width, int height,const char* title)
 // {
 //     Draw_Rect( iX, iY, iX + width, iY + height, RGB(100,200,80),0);

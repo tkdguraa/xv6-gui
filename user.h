@@ -32,6 +32,11 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int signal(int signum, sighandler_t handler);
+int sigsend(int pid, int signum);
+int cps(void);
+int chpr(int pid, int pr);
+
 
 int loadimg(PICNODE pic,int height,int width, int x, int y);
 int createwindow(wnd widnow);
@@ -54,7 +59,6 @@ int atoi(const char*);
 // umalloc.c
 void* malloc(uint);
 void free(void*);
+int atoi(const char*);
 
-
-
-
+int strfindfromback(char *s, const char c);

@@ -24,3 +24,7 @@
 #define SYS_createwindow 23
 #define SYS_deletewindow 24
 
+#define SYS_signal 25
+#define SYS_sigsend 26
+#define SYS_cps    27
+#define SYS_chpr   28

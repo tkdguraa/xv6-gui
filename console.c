@@ -189,11 +189,14 @@ struct {
 void
 consoleintr(int (*getc)(void))
 {
-  int c, doprocdump = 0;
+  int c, doprocdump = 0, kill_flag = 0;
 
   acquire(&cons.lock);
   while((c = getc()) >= 0){
     switch(c){
+    case C('C'):  // Kill the current process
+      kill_flag = 1;
+      break;
     case C('P'):  // Process listing.
       doprocdump = 1;   // procdump() locks cons.lock indirectly; invoke later
       break;
@@ -224,9 +227,10 @@ consoleintr(int (*getc)(void))
     }
   }
   release(&cons.lock);
-  if(doprocdump) {
+  if(doprocdump)
     procdump();  // now call procdump() wo. cons.lock held
-  }
+  if(kill_flag)
+    killcurproc();
 }
 
 int

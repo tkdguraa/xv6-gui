@@ -17,7 +17,7 @@ exec(char *path, char **argv)
   struct inode *ip;
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
-
+  cprintf("hlhlhlhl");
   begin_op();
   if((ip = namei(path)) == 0){
     end_op();
@@ -90,10 +90,13 @@ exec(char *path, char **argv)
   oldpgdir = proc->pgdir;
   proc->pgdir = pgdir;
   proc->sz = sz;
-  proc->tf->eip = elf.entry;  // main
+  proc->tf->eip = elf.entry; // main
   proc->tf->esp = sp;
+  proc->priority = 3; // default priority
+  cprintf("EXEC\n");
   switchuvm(proc);
   freevm(oldpgdir);
+  
   return 0;
 
  bad:
@@ -103,5 +106,6 @@ exec(char *path, char **argv)
     iunlockput(ip);
     end_op();
   }
+   
   return -1;
 }

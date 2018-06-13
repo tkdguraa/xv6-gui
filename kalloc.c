@@ -20,6 +20,8 @@ struct {
   struct spinlock lock;
   int use_lock;
   struct run *freelist;
+  uint free_pages;  // number of free pages
+  uint pg_refcount[PHYSTOP >> PGSHIFT]; // reference count for each 4KB page
 } kmem;
 
 // Initialization happens in two phases.
@@ -94,3 +96,43 @@ kalloc(void)
   return (char*)r;
 }
 
+uint num_free_pages(void)
+{
+  acquire(&kmem.lock);
+  uint free_pages = kmem.free_pages;
+  release(&kmem.lock);
+  return free_pages;
+}
+
+void decrease_ref_count(uint pa)
+{
+  if(pa < (uint)V2P(end) || pa >= PHYSTOP)
+    panic("decrement_ref_count");
+
+  acquire(&kmem.lock);
+  --kmem.pg_refcount[pa >> PGSHIFT];
+  release(&kmem.lock);
+}
+ 
+void increase_ref_count(uint pa)
+{
+  if(pa < (uint)V2P(end) || pa >= PHYSTOP)
+    panic("increment_ref_count");
+
+  acquire(&kmem.lock);
+  ++kmem.pg_refcount[pa >> PGSHIFT];
+  release(&kmem.lock);
+}
+
+uint get_ref_count(uint pa)
+{
+  if(pa < (uint)V2P(end) || pa >= PHYSTOP)
+    panic("get_ref_count");
+  uint count;
+
+  acquire(&kmem.lock);
+  count = kmem.pg_refcount[pa >> PGSHIFT];
+  release(&kmem.lock);
+
+  return count;
+}

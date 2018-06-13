@@ -32,7 +32,8 @@ OBJS = \
 	queue.o\
 	character.o\
 	Graphics.o\
-	
+	mouseclick.o\
+	paintboard.o\
 	
 
 # Cross-compiling (e.g., on Mac OS X)
@@ -180,9 +181,15 @@ UPROGS=\
 	_wc\
 	_zombie\
 	_desk\
+	_ps\
+	_sigtest\
+	_foo\
+	_chpr\
+	_cow_test\
 
 IMGS=desk.bmp\
 	textedit.bmp\
+	paintboard.bmp\
 
 fs.img: mkfs README $(IMGS) $(UPROGS)
 	./mkfs fs.img README $(IMGS) $(UPROGS)
@@ -251,8 +258,8 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 
 EXTRA=\
 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
-	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
-	printf.c umalloc.c desk.c\
+	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c ps.c sigtest.c\
+	foo.c chpr.c cow_test.c printf.c umalloc.c desk.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
 
