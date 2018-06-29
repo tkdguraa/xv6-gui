@@ -148,8 +148,11 @@ main(void)
   static char buf[100];
   int fd;
   char cur_dir[100];
+<<<<<<< HEAD
 
   int h, w;
+=======
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 
   // Assumes three file descriptors open.
   while((fd = open("console", O_RDWR)) >= 0){

@@ -108,6 +108,12 @@ found:
 
   p->tick = 0;
   p->priority = 5; // Default priority
+<<<<<<< HEAD
+=======
+  cprintf("Allocproc\n");
+
+  release(&ptable.lock);
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 
   release(&ptable.lock);
   // Allocate kernel stack.
@@ -208,16 +214,27 @@ fork(void)
     return -1;
 
   // Copy process state from proc.
+<<<<<<< HEAD
   if((np->pgdir = cowuvm(proc->pgdir, proc->sz)) == 0){
+=======
+  if((np->pgdir = cowuvm(curproc->pgdir, curproc->sz)) == 0){
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
     return -1;
   }
+<<<<<<< HEAD
   np->sz = proc->sz;
   np->parent = proc;
   *np->tf = *proc->tf;
   memcpy(np->sighandlers, proc->sighandlers, 32);
+=======
+  np->sz = curproc->sz;
+  np->parent = curproc;
+  *np->tf = *curproc->tf;
+  memcpy(np->sighandlers, curproc->sighandlers, 32);
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -235,6 +252,13 @@ fork(void)
   acquire(&ptable.lock);
   np->state = RUNNABLE;
   np->in_time = ticks; // FIFO: time that state is changed into RUNNABLE
+<<<<<<< HEAD
+=======
+
+  // change sh proc's priority to 3
+  if(np->name[0] == 's' && np->name[1] == 'h')
+    np->priority = 3;
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 
   // change sh proc's priority to 3
   if(np->name[0] == 's' && np->name[1] == 'h')
@@ -271,7 +295,11 @@ exit(void)
   proc->cwd = 0;
 
   // Send SIGCHILDEXIT signal to its parent process
+<<<<<<< HEAD
   sigsend(proc->parent->pid, SIGCHILDEXIT);
+=======
+  sigsend(curproc->parent->pid, SIGCHILDEXIT);
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
   
   acquire(&ptable.lock);
 
@@ -349,7 +377,11 @@ scheduler(void)
 {
   struct proc *p = ptable.proc;
   struct proc *p2, *sched_proc;  // for scheduling
+<<<<<<< HEAD
   struct cpu *c = cpu;
+=======
+  struct cpu *c = mycpu();
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
   int mint = 0; // for FIFO scheduling
   int flag;     // for MLQ scheduling
   c->proc = 0;
@@ -536,8 +568,13 @@ void
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
+<<<<<<< HEAD
   proc->state = RUNNABLE;
   proc->in_time = ticks;
+=======
+  myproc()->state = RUNNABLE;
+  myproc()->in_time = ticks;
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
   sched();
   release(&ptable.lock);
 }
@@ -685,6 +722,7 @@ procdump(void)
   }
 }
 
+<<<<<<< HEAD
 int
 loadimg(PICNODE pic,int width,int height, int x, int y)
 {
@@ -726,10 +764,13 @@ for( i=0;i<height;i++)
   }
 }
 
+=======
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 // Register a signal handler
 void
 register_handler(sighandler_t handler)
 { 
+<<<<<<< HEAD
   char* addr = uva2ka(proc->pgdir, (char*)proc->tf->esp);
   if ((proc->tf->esp & 0xFFF) == 0)
     panic("esp_offset == 0");
@@ -749,12 +790,38 @@ void sigint() {
 void sigkillchild() {
   struct proc *p;
   cprintf("IN SIGKILLCHILD %d\n",proc->pid);
+=======
+  struct proc *curproc = myproc();
+  char* addr = uva2ka(curproc->pgdir, (char*)curproc->tf->esp);
+  if ((curproc->tf->esp & 0xFFF) == 0)
+    panic("esp_offset == 0");
+
+  // Open a new frame
+  *(int*)(addr + ((curproc->tf->esp - 4) & 0xFFF)) = curproc->tf->eip;
+  curproc->tf->esp -= 4;
+  // update eip
+  curproc->tf->eip = (uint)handler;
+}
+
+void sigint() {
+  //cprintf("IN SIGINT %d\n" , myproc()->pid);
+  myproc()->killed = 1;
+}
+
+void sigkillchild() {
+  struct proc *p, *curproc = myproc();
+  cprintf("IN SIGKILLCHILD %d\n",curproc->pid);
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     if(p->state == UNUSED)
       continue;
 
+<<<<<<< HEAD
     if (p->parent->pid == proc->pid) {
+=======
+    if (p->parent->pid == curproc->pid) {
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
       cprintf("I'M A CHILD %d", p->pid);
       sigsend(p->pid, SIGINT);
     }
@@ -762,7 +829,11 @@ void sigkillchild() {
 }
 
 void sigchildexit() {
+<<<<<<< HEAD
   cprintf("SIGCHILDEXIT (one of my child terminated) %d\n", proc->pid);
+=======
+  //cprintf("SIGCHILDEXIT (one of my child terminated) %d\n", myproc()->pid);
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 }
 
 void killcurproc(void) {
@@ -785,7 +856,13 @@ void killcurproc(void) {
 int
 signal(int signum, sighandler_t handler)
 {
+<<<<<<< HEAD
   proc->sighandlers[signum] = handler;
+=======
+  struct proc *curproc = myproc();
+
+  curproc->sighandlers[signum] = handler;
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
   return 0;
 }
 
@@ -847,4 +924,8 @@ chpr(int pid, int priority)
   release(&ptable.lock);
 
   return pid;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654

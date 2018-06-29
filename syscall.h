@@ -20,6 +20,7 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
+<<<<<<< HEAD
 #define SYS_loadimg 22
 #define SYS_createwindow 23
 #define SYS_deletewindow 24
@@ -28,3 +29,9 @@
 #define SYS_sigsend 26
 #define SYS_cps    27
 #define SYS_chpr   28
+=======
+#define SYS_signal 22
+#define SYS_sigsend 23
+#define SYS_cps    24
+#define SYS_chpr   25
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654

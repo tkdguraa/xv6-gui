@@ -99,6 +99,7 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+<<<<<<< HEAD
 int iconcnt=0;
 int
 sys_loadimg(void)
@@ -190,6 +191,8 @@ int sys_createwindow(void)
 
 // }
 
+=======
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 
 int
 sys_signal(void)

@@ -87,6 +87,7 @@ exec(char *path, char **argv)
   safestrcpy(proc->name, last, sizeof(proc->name));
 
   // Commit to the user image.
+<<<<<<< HEAD
   oldpgdir = proc->pgdir;
   proc->pgdir = pgdir;
   proc->sz = sz;
@@ -95,6 +96,16 @@ exec(char *path, char **argv)
   proc->priority = 3; // default priority
   cprintf("EXEC\n");
   switchuvm(proc);
+=======
+  oldpgdir = curproc->pgdir;
+  curproc->pgdir = pgdir;
+  curproc->sz = sz;
+  curproc->tf->eip = elf.entry; // main
+  curproc->tf->esp = sp;
+  curproc->priority = 3; // default priority
+  cprintf("EXEC\n");
+  switchuvm(curproc);
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
   freevm(oldpgdir);
   
   return 0;

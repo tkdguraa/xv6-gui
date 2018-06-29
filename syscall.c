@@ -98,9 +98,12 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+<<<<<<< HEAD
 extern int sys_loadimg(void);
 extern int sys_createwindow(void);
 // extern int sys_deletewindow(void);
+=======
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 extern int sys_signal(void);
 extern int sys_sigsend(void);
 extern int sys_cps(void);
@@ -129,9 +132,12 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+<<<<<<< HEAD
 [SYS_loadimg] sys_loadimg,
 [SYS_createwindow] sys_createwindow,
 // [SYS_deletewindow] sys_deletewindow,
+=======
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 [SYS_signal]  sys_signal,
 [SYS_sigsend] sys_sigsend,
 [SYS_cps]     sys_cps,
@@ -143,8 +149,13 @@ syscall(void)
 {
   int num;
 
+<<<<<<< HEAD
   num = proc->tf->eax;
   proc->priority = 3; // system call default pirority
+=======
+  num = curproc->tf->eax;
+  curproc->priority = 3; // system call default pirority
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     proc->tf->eax = syscalls[num]();
   } else {

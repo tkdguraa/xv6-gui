@@ -181,13 +181,17 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
+<<<<<<< HEAD
 	_desk\
+=======
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 	_ps\
 	_sigtest\
 	_foo\
 	_chpr\
 	_cow_test\
 
+<<<<<<< HEAD
 IMGS=	desk.bmp\
 	textedit.bmp\
 	paintboard.bmp\
@@ -196,6 +200,10 @@ IMGS=	desk.bmp\
 
 fs.img: mkfs README $(IMGS) $(UPROGS)
 	./mkfs fs.img README $(IMGS) $(UPROGS)
+=======
+fs.img: mkfs README $(UPROGS)
+	./mkfs fs.img README $(UPROGS)
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 
 -include *.d
 
@@ -262,7 +270,11 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 EXTRA=\
 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
 	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c ps.c sigtest.c\
+<<<<<<< HEAD
 	foo.c chpr.c cow_test.c printf.c umalloc.c desk.c\
+=======
+	foo.c chpr.c cow_test.c printf.c umalloc.c\
+>>>>>>> 47aa0ca669b5258a612c78e3005145ad951b7654
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
 
