@@ -8,6 +8,8 @@
 #include "VBE.h"
 #include "Graphics.h"
 #include "mouse.h"
+#include "windows.h"
+
 static void startothers(void);
 static void mpmain(void)  __attribute__((noreturn));
 extern pde_t *kpgdir;
@@ -16,6 +18,7 @@ ushort savemouse[20][20];
 // Bootstrap processor starts running C code here.
 // Allocate a real stack and switch to it, first
 // doing some setup required for memory allocator to work.
+wndList List;
 int
 main(void)
 {
@@ -37,7 +40,7 @@ main(void)
   iinit();
   ideinit();       // disk
   vesamodeinit();
-  test();
+  init();
   if(!ismp)
     timerinit();   // uniprocessor timer
   startothers();   // start other processors
@@ -48,10 +51,9 @@ main(void)
   mpmain();
 }
 
-void test()
+void init()
 {
- // Draw_Rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,RGB(255,255,255),1);
-  //Windows(50,50,600,400,"hello");
+  initList(List);
   mouseinit();
 }
 // Other CPUs jump here from entryother.S.

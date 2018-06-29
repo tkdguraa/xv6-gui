@@ -8,8 +8,11 @@
 #include "proc.h"
 #include "bitmap.h"
 #include "windows.h"
+#include"character.h"
+
 wnd EditorWnd;
 wnd pbWnd;
+wnd test;
 int cnt=0;
 PICNODE bgpic;
 PICNODE textedit;
@@ -115,6 +118,7 @@ sys_loadimg(void)
 
   return loadimg(pic,height,width,x,y);
 }
+
 int sys_createwindow(void)
 {
   wnd window;
@@ -135,19 +139,47 @@ int sys_createwindow(void)
   if(argint(4,&height)<0)
   return;
    window.height=height;
+
  if(argstr(5,&Title)<0)
   return;
   window.Title=Title;
 
+  window.IsActivated=0;
+  int iX,iY;
+  iX=0;
+  iY=0;
+
+  draw_rect(window, iX, iY, iX + width, iY + height, RGB(255,255,255),1);
+  draw_rect(window, iX, iY, iX + width, iY + height, RGB(60,60,60),0);
+  draw_rect(window, iX, iY, iX + width - 1, iY + 21, RGB(60,60,60),1);
+  draw_line(window, iX + width - 20, iY + 5, iX + width - 6, iY + 15, RGB(255,255,255));
+  draw_line(window, iX + width - 20, iY + 15, iX + width - 6, iY + 5, RGB(255,255,255));
+  draw_line(window, iX + width - 25, iY, iX + width - 25, iY + 21, RGB(255,255,255));
+  int i;
+  for(i=0;i<strlen(window.Title);i++)
+  {
+    write_char(window, iX + 6 + CHAR_WIDTH * i, iY + 3,RGB(255,255,255),RGB(255,255,255),window.Title[i]);
+  }
+  
+  
+
   if(cnt==0)
   {
+  window.ID=1;
   EditorWnd=window;
   cprintf("%s\n",window.Title);
   }
   if(cnt==1)
   {
+  window.ID=2;
   pbWnd=window;
   cprintf("%s",window.Title);
+  }
+  if(cnt==2)
+  {
+    window.ID=3;
+    test=window;
+    cprintf("%s",window.Title);
   }
   cnt++;
 }

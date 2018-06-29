@@ -12,14 +12,13 @@ typedef ushort  COLOR;
 
 
 int RGB(int r,int g,int b);
-void Draw_Point( wnd window,int iX, int iY, COLOR stColor );
-void local_Draw_Point(int iX, int iY, COLOR stColor );
-void local_Write_Char( int iX, int iY, COLOR CharColor, COLOR BackColor, const char* inputString, int length );
-void Draw_Line( wnd window,int iX1, int iY1, int iX2, int iY2, COLOR stColor );
-void Draw_Rect( wnd window,int iX1, int iY1, int iX2, int iY2, COLOR stColor, int Fill );
-void Write_Char( wnd window,int iX,int iY,COLOR charColor,COLOR BackColor,const char* inputString,int length);
-void Windows(int iX,int iY,int width,int height,const char* title);
-void Draw_Mouse();
+void draw_point( wnd window,int iX, int iY, COLOR stColor );
+void local_draw_point(int iX, int iY, COLOR stColor );
+void local_write_char( int iX, int iY, COLOR CharColor, COLOR BackColor, const char* inputString, int length );
+void draw_line( wnd window,int iX1, int iY1, int iX2, int iY2, COLOR stColor );
+void draw_rect( wnd window,int iX1, int iY1, int iX2, int iY2, COLOR stColor, int Fill );
+void write_char( wnd window,int iX,int iY,COLOR charColor,COLOR BackColor,const char inputString);
+void draw_mouse();
 void draw_picture(PICNODE pic, int x, int y);
 void save_point( int iX,int iY);
 void save_mouse( int iX, int iY );
@@ -27,7 +26,11 @@ void repaint(int iX, int iY);
 void updatewnd(wnd Window,int JudActivated);
 void mouseclick(int iX,int iY);
 void reset();
-void startpaint(int x,int y);
+void start_paint(int x,int y);
+void setup_paintB(wnd Window);
+void setup_editor(wnd Window);
+void start_editor(wnd Window);
+void initList(wndList List);    
 //void FillRect(void ) 
 
 #endif 

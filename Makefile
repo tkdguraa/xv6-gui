@@ -34,6 +34,7 @@ OBJS = \
 	Graphics.o\
 	mouseclick.o\
 	paintboard.o\
+	editor.o\
 	
 
 # Cross-compiling (e.g., on Mac OS X)
@@ -187,9 +188,11 @@ UPROGS=\
 	_chpr\
 	_cow_test\
 
-IMGS=desk.bmp\
+IMGS=	desk.bmp\
 	textedit.bmp\
 	paintboard.bmp\
+	test.bmp\
+	
 
 fs.img: mkfs README $(IMGS) $(UPROGS)
 	./mkfs fs.img README $(IMGS) $(UPROGS)

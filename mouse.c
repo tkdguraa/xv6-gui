@@ -145,7 +145,7 @@ void movemouse()
         repaint(iX-x,iY-y);
     }
     save_mouse(iX,iY);
-    Draw_Mouse(iX,iY);
+    draw_mouse(iX,iY);
     }
 
 }

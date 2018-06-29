@@ -701,12 +701,15 @@ loadimg(PICNODE pic,int width,int height, int x, int y)
 			if (rgb.rgbReserved == 1) continue;
 			color = (unsigned short)RGB(rgb.rgbRed, rgb.rgbGreen, rgb.rgbBlue);
 		//cprintf("R:%d G:%d B:%d\n",rgb.rgbRed,rgb.rgbGreen,rgb.rgbBlue);
-			local_Draw_Point(j+x,height-i-1+y, color);
+			local_draw_point(j+x,height-i-1+y, color);
       BACKGROUND[1024*(height-i-1+y)+(j+x)]=color;
 		}
 	}
   return 0;
 }
+
+extern wndList List;
+
 void reset()
 {
 int height=768;
@@ -715,7 +718,11 @@ int i,j;
 for( i=0;i<height;i++)
   for( j=0;j<width;j++)
   {
-    local_Draw_Point(j,i,BACKGROUND[i*width+j]);
+    local_draw_point(j,i,BACKGROUND[i*width+j]);
+  }
+  for(i=0;i<List.num;i++)
+  {
+    updateWnd(List.windowList[i],0);
   }
 }
 

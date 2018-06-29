@@ -4,10 +4,12 @@
 #include "user.h"
 #include "VBE.h"
 #include "spinlock.h"
+#include "windows.h"
 
 struct spinlock screen_lock;
 struct spinlock buf1_lock;
 struct spinlock buf2_lock;
+
 
 void vesamodeinit()
 {

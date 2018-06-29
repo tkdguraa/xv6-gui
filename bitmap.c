@@ -27,7 +27,7 @@ void draw_picture(PICNODE pic, int x, int y)
 			if (rgb.rgbReserved == 1) continue;
 			color = (unsigned short)RGB(rgb.rgbRed, rgb.rgbGreen, rgb.rgbBlue);
 			//printf(0,"%d %d R:%d G:%d B:%d\n",j,i,rgb.rgbRed,rgb.rgbGreen,rgb.rgbBlue);
-			local_Draw_Point(j,i, color);
+			local_draw_point(j,i, color);
 		}
 	}
 }

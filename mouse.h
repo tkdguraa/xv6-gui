@@ -8,6 +8,7 @@
 #define MOUSE_LBUTTON   0x01
 #define MOUSE_RBUTTON   0x02
 #define MOUSE_MBUTTON   0x04
+
 #pragma pack( push, 1 )
 typedef struct mousemove
 {
